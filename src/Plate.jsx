@@ -5,7 +5,7 @@ const still = matchMedia('(prefers-reduced-motion: reduce)');
 
 // --- page turns: the old plate goes, fast, and the new one comes up out of the same dark. each world has its own way of going
 const OUT = 340, IN = 480;
-const FX = { shore: 'drip', graves: 'drip', woods: 'burn', kitchen: 'blinds', lamp: 'iris', town: 'shred', cellar: 'fizz' };
+const FX = { shore: 'drip', graves: 'drip', woods: 'burn', kitchen: 'blinds', lamp: 'iris', town: 'shred', cellar: 'fizz', deep: 'fizz' };
 const B4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 const rnd = (a, b = 0) => { const x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - Math.floor(x); };
 const soft = (x, y) => {                                  // lumpy noise, for things that burn away

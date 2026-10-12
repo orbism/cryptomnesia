@@ -369,6 +369,12 @@
     if (L >= 0) { Q.L = L; Q.A = shine && L >= 0.85 && !(x > 0.64 && y > 0.43) ? (1.05 - 0.75 * x) * (0.35 + 0.9 * fbm(x * 16, y * 22)) : 0; Q.B = B; Q.M = 0; }
   };
 
+  // the cat, sat facing you. x from the middle of its body, y from where it sits (up is negative), at the size it is on its own plate. rag = how shaggy here, lid = how open its eyes. 0 = not cat, 1 = cat, 2 = eye
+  const mog = (x, y, rag, lid) => {
+    const hx = x + 0.05, ear = (ex, top) => y > top && y < -0.34 && abs(hx - ex) < (y - top) * 0.3;
+    for (const sx of [-1, 1]) { const ex = hx - sx * 0.023, ey = y + 0.312 + sx * ex * 0.3; if (lid && hypot(ex / 0.015, ey / (0.0085 * lid)) < 1) return abs(ex) < 0.0028 ? 1 : 2; }
+    return (y < 0.006 && (hypot((x - 0.12 * (y + 0.14)) / 0.075, (y + 0.14) / 0.17) < 1 + rag || hypot((x - 0.045) / 0.07, (y + 0.05) / 0.075) < 1 + rag)) || hypot(hx, y + 0.305) < 0.056 * (1 + rag * 0.7) || ear(-0.034, -0.425) || ear(0.034, -0.39) ? 1 : 0;
+  };
   // --- cat: thin, shaggy, on a wall. one eye is wrong
   S.cat = (u, v, f, o) => {
     const tail = [0, 0.02, 0.04, 0.02, 0.02, 0.02][f], lid = [1, 1, 1, 0.5, 0, 0.5][f], wall = 0.74, cx = 0.44, hx = cx - 0.05;
@@ -379,14 +385,9 @@
       M = 0; L = v - wall < 0.012 ? 0.85 : fr((v - wall) * 22) < 0.14 || fr(bx) < 0.05 ? 0.02 : 0.1 + 0.22 * hash(floor(bx), by);
     }
     const rag = 0.5 * (fbm(u * 46, v * 46) - 0.5) + 0.3 * (hash(floor(u * 80), floor(v * 80)) - 0.5);
-    const ear = (ex, top) => v > top && v < 0.4 && abs(u - hx - ex) < (v - top) * 0.3;
-    if ((hypot((u - cx - 0.12 * (v - 0.6)) / 0.075, (v - 0.6) / 0.17) < 1 + rag && v < wall + 0.006) || (hypot((u - cx - 0.045) / 0.07, (v - 0.69) / 0.075) < 1 + rag && v < wall + 0.006)
-      || hypot(u - hx, v - 0.435) < 0.056 * (1 + rag * 0.7) || ear(-0.034, 0.315) || ear(0.034, 0.35)
-      || dSeg(u, v, cx + 0.08, wall - 0.02, cx + 0.15, wall + 0.1) < 0.006 + 0.008 * hash(floor(v * 70), 1) || dSeg(u, v, cx + 0.15, wall + 0.1, cx + 0.13 + tail, wall + 0.24) < 0.004 + 0.008 * hash(floor(v * 70), 2)) { L = 0; M = 0; }
-    for (const sx of [-1, 1]) {
-      const ex = u - hx - sx * 0.023, ey = v - 0.428 + sx * ex * 0.3;
-      if (lid && hypot(ex / 0.015, ey / (0.0085 * lid)) < 1) A = abs(ex) < 0.0028 ? 0 : 1;
-    }
+    const m = mog(u - cx, v - wall, rag, lid);
+    if (m || dSeg(u, v, cx + 0.08, wall - 0.02, cx + 0.15, wall + 0.1) < 0.006 + 0.008 * hash(floor(v * 70), 1) || dSeg(u, v, cx + 0.15, wall + 0.1, cx + 0.13 + tail, wall + 0.24) < 0.004 + 0.008 * hash(floor(v * 70), 2)) { L = 0; M = 0; }
+    if (m === 2) A = 1;
     o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
   };
 
@@ -1118,20 +1119,32 @@
   // --- stop: the shelter on the quarry road. a bench, a timetable with one time on it, foxgloves up through the tarmac
   const FOX = [[0.07, 0.4, 0.02], [0.15, 0.56, -0.03], [0.9, 0.36, -0.02], [0.96, 0.58, 0.03]];
   S.stop = (u, v, f, o) => {
-    const fl = [1, 0.8, 1, 0.9][f], gy = 0.66 + 0.1 * u;
-    let L = 0.1 + 0.26 * ss(0, 0.6, v) + 0.16 * ss(0.5, 0.8, fbm(u * 3, v * 10)), A = 0, M = 1;
-    if (v > 0.5 - 0.07 * fbm(u * 5, 2) - 0.08 * u) { L = fbm(u * 40, v * 40) > 0.62 ? 0.12 : 0.02; M = 0; }
-    if (v > gy) { M = 0; L = abs(v - gy - 0.1 - 0.06 * u) < 0.006 ? 0.5 : 0.06 + 0.1 * hash(floor(u * 90), floor(v * 90)); }
-    if (quad(u, v, 0.3, 0.3, 0.8, 0.25, 0.76, 0.17, 0.24, 0.25)) { M = 0; L = 0.05; }
-    if (dSeg(u, v, 0.24, 0.25, 0.76, 0.17) < 0.008) { M = 0; L = 0.7; }
-    if (wall(u, v, 0.3, 0.8, 0.3, 0.25, 0.7, 0.76)) {
-      const s = W.s, t = W.t;
-      M = 0; L = fr(s * 6) < 0.04 ? 0.04 : 0.16 + 0.1 * fbm(s * 9, t * 9);
-      if (s > 0.6 && s < 0.86 && t > 0.16 && t < 0.6) { L = 0; A = abs(t - 0.36) < 0.02 && s > 0.65 && s < 0.8 ? 0 : 0.8 * fl; }
-      if (t > 0.72 && t < 0.78 && s > 0.05 && s < 0.52) L = 0.7;
-      if (t >= 0.78 && (abs(s - 0.09) < 0.012 || abs(s - 0.48) < 0.012)) L = 0.45;
+    const C = [0.52, 0.1, 0.8], F = [-1.97, 4.82, 0.33], E = 4.2, fl = [1, 0.85, 1, 0.92][f];
+    let L = 0.1 + 0.26 * ss(0, 0.6, v) + 0.16 * ss(0.5, 0.8, fbm(u * 3, v * 10)), A = 0, M = 1, k;
+    // a street lamp, out of the picture, high and in front and to the right. what it reaches under the roof, and how hard
+    const lit = () => { const s = (E - 3.9 - H.y) / (E - 5.1 - H.y), z = H.z + s * (-3.5 - H.z); return fl * (z < -0.3 || H.y < E - 3.95 ? 1 : 0.05) * exp(-max(0, 3.7 - H.x) * 0.62) * exp(-max(0, H.x - 4.4) * 1.2); };
+    const ink = (t, l, am = 0.16) => { L = t * (am + (1 - am) * l); A = 0.34 * l * l * l * t; M = 0; };
+    if (v > 0.12 - 0.05 * fbm(u * 5, 2) - 0.04 * u) { L = fbm(u * 40, v * 40) > 0.62 ? 0.12 : 0.02; M = 0; }
+    if (gp(u, v, C, F, E)) {                                                                                                           // the road, the kerb, the slab the shelter stands on
+      const in_ = H.x > 0 && H.x < 4 && H.z > 0 && H.z < 1.4, l = lit() * ss(-3.5, -0.5, H.z);
+      ink(abs(H.z + 0.9) < 0.05 ? 0.8 : in_ ? (fr(H.x * 1.2) < 0.04 ? 0.2 : 0.55) : 0.1 + 0.16 * hash(floor(H.x * 30), floor(H.z * 30)), l * (in_ && H.x > 0.4 && H.x < 2.7 && H.z > 0.55 ? 0.1 : 1));
+      L = max(L, (0.05 + 0.08 * hash(floor(H.x * 30), floor(H.z * 30)) + (abs(H.z + 0.9) < 0.05 ? 0.25 : 0)) * ss(30, 4, H.d));
     }
-    for (const px of [0.24, 0.76]) if (abs(u - px) < 0.008 && v > (px < 0.5 ? 0.25 : 0.17) && v < (px < 0.5 ? 0.76 : 0.86)) { M = 0; L = 0.6; A = 0; }
+    if (rb(u, v, C, F, 0, 4, E - 3.9, E, 1.4, 1.5) === 3) {                                                                                // the back: boards, the timetable in its frame, a rail to lean on
+      const x = H.x, y = H.y, l = lit(), a = (x - 2.75) / 0.85, b = (y - E + 3.12) / 1.3, r = fr(b * 9), row = floor(b * 9);
+      ink(fr(x * 3.2) < 0.06 ? 0.3 : 0.62 + 0.2 * fbm(x * 2, y * 9), l * (y > E - 0.5 && x > 0.5 && x < 2.7 ? 0.2 : 1), 0.03);
+      if (abs(y - E + 1.7) < 0.05 && x < 2.6) ink(1, l);
+      if (a > -0.06 && a < 1.06 && b > -0.04 && b < 1.04) {
+        ink(a < 0 || a > 1 || b < 0 || b > 1 ? 0.08 : 1, max(l, 0.12), 0.3); A *= 0.35;
+        if (a > 0.05 && a < 0.95 && b > 0.03 && (row === 0 ? r > 0.25 && r < 0.75 && a > 0.2 && a < 0.8 : r < 0.12 || abs(a - 0.36) < 0.015 || abs(a - 0.68) < 0.015)) L *= row ? 0.35 : 0.06;   // a heading, ruled for a day's buses
+        if (row === 5 && r > 0.3 && r < 0.8 && a > 0.42 && a < 0.62 && fr(a * 22) > 0.25) { L = 0; A = 1; }                              // and one time on it
+      }
+    }
+    if ((k = rb(u, v, C, F, -0.08, 0, E - 3.9, E, 0, 1.5))) ink(k === 2 ? (fr(H.s * 4.2) < 0.08 ? 0.1 : 0.34) : 0.5, 0, 1);   // the end wall
+    for (const lx of [0.62, 2.42]) if ((k = rb(u, v, C, F, lx, lx + 0.1, E - 0.46, E, 0.66, 1.34))) ink(k === 3 ? 0.55 : 0.25, lit() * 0.3, 0.8);   // the bench: two frames, three slats
+    for (const z0 of [0.62, 0.82, 1.02, 1.22]) if ((k = rb(u, v, C, F, 0.5, 2.62, E - 0.54, E - 0.46, z0, z0 + 0.16))) ink(k === 5 ? 1 : 0.08, k === 5 ? lit() * 0.6 : 0, k === 5 ? (fr(H.s * 9) < 0.06 ? 0.3 : 0.75) : 1);
+    if ((k = rb(u, v, C, F, -0.25, 4.25, E - 4.02, E - 3.9, -0.35, 1.6))) ink(k === 6 ? 0.2 : k === 3 ? 1 : 0.5, k === 3 ? lit() * 0.5 : 0, k === 6 ? 0.3 : 0.85);   // the roof
+    for (const px of [0, 3.92]) if ((k = rb(u, v, C, F, px, px + 0.08, E - 3.9, E, -0.04, 0.04))) ink(k === 3 ? 1 : 0.45, px ? 0.5 * fl : 0, 0.8);   // posts
     FOX.forEach(([x, top, lean], i) => {
       const sx = x + lean * (0.98 - v), d = u - sx, k = floor((v - top) / 0.032), by = top + (k + 0.5) * 0.032, bw = 0.009 + 0.0013 * k, side = k & 1 ? 1 : -1;
       if (v <= top) return;
@@ -1139,7 +1152,7 @@
       if (k < 9 && ell(u, v, sx + side * (bw + 0.004), by, bw, 0.015) < 1) { M = 0; A = 0; L = v > by + 0.005 ? 0.3 : 0.92; }
       if (v > top + 0.3 && abs(d) < (v - top - 0.3) * 0.3 * (0.5 + 0.5 * abs(sin(v * 60 + i)))) { M = 0; A = 0; L = fr(d * 70 + v * 20) < 0.3 ? 0.04 : 0.24; }
     });
-    o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
+    o[0] = min(L, 1); o[1] = min(A, 1); o[2] = 0; o[3] = M;
   };
 
   // --- phone: the call box in the shelter, a chrome three-slot on the wall. the receiver has been off its hook long enough for ivy, and it is not quite still
@@ -1255,6 +1268,32 @@
   };
 
   // --- cinema: from the back row. every seat is taken by a coat. what is showing is a staircase
+  const EXIT = [[7, 4, 6, 4, 7], [5, 5, 2, 5, 5], [7, 2, 2, 2, 7], [7, 2, 2, 2, 2]];
+  // what is showing: a staircase from its foot, a runner up the middle, the rail and its spindles, the door at the top ajar and lit, and somebody stood at the head of it. x across (1.8 to 1 up), y down
+  const film = (x, y, f, o) => {
+    const C = [0.86, 0.86, 1.5], F = [0.2, 1.5, -0.2], E = 1.5, top = E - 2.34, dr = pj(C, F, 0.3, top - 1, 4.5), gl = exp(-hypot(x - dr.u, y - dr.v) * 5);
+    let L = 0.03, A = 0, k;
+    if ((k = rb(x, y, C, F, -0.75, 3, -4, E, -3, 4.55, 1))) {                                                                           // the hall: paper on the wall beside the stair, the wall across the head of it
+      if (k === 1) { const rise = H.y - (E - (H.z / 0.27) * 0.18); L = rise > -0.85 ? (rise > -0.9 && rise < -0.8 ? 0.8 : 0.12) : fr(H.z * 3 + H.y * 0.2) < 0.4 ? 0.4 : 0.24; if (abs(H.z - 1.6) < 0.4 && abs(H.y + 0.75) < 0.3) L = abs(H.z - 1.6) > 0.33 || abs(H.y + 0.75) > 0.24 ? 0.6 : 0.02; L *= 0.5 + 0.8 * gl; }
+      else if (k === 4) {
+        L = (fr(H.x * 3) < 0.4 ? 0.3 : 0.18) + 0.3 * gl;
+        if (abs(H.x) < 0.48 && H.y > top - 2.05 && H.y < top) { L = abs(H.x) > 0.42 || H.y < top - 1.98 ? 0.6 : 0.2; if (H.x > 0.24 && H.x < 0.42 && H.y > top - 1.98) { L = 0; A = [1, 0.9, 1, 0.7][f]; } if (hypot(H.x + 0.3, H.y - top + 1) < 0.035) L = 1; }   // the door, a hand's width open
+      } else if (k === 5) L = 0.05;
+    }
+    if (rb(x, y, C, F, -0.75, 0.75, top, E, 3.24, 4.55) === 5) L = 0.25 + 0.5 * gl;                                                       // the landing
+    for (let i = 11; i >= 0; i--) if ((k = rb(x, y, C, F, -0.75, 0.75, E - (i + 1) * 0.18, E, i * 0.27, i * 0.27 + 0.27))) {              // twelve steps. nosing, riser, tread; the runner and its rods
+      const run = abs(H.x) < 0.3, l = 0.65 + 0.35 * (i / 11);
+      L = k === 5 ? (run ? (fr(H.x * 12) < 0.5 ? 0.4 : 0.22) : 0.95) * l : k === 3 ? (H.y < E - (i + 1) * 0.18 + 0.03 ? 0.8 * l : run ? 0.1 : 0.2 * l) : 0.06;
+      A = k === 5 ? 0.35 * ss(6, 11, i) : 0;
+    }
+    for (let i = 0; i < 12; i++) { const a = pj(C, F, 0.75, E - (i + 1) * 0.18, i * 0.27 + 0.13); if (abs(x - a.u) < 0.004 * a.k && y < a.v && y > a.v - 0.88 * a.k) { L = 0.6; A = 0; } }   // spindles
+    const r0 = pj(C, F, 0.75, E - 1.1, -0.05), r1 = pj(C, F, 0.75, top - 0.9, 3.3);
+    if (dSeg(x, y, r0.u, r0.v, r1.u, r1.v) < 0.012) { L = 0.95; A = 0; }                                                                // the rail
+    if ((k = rb(x, y, C, F, 0.68, 0.84, E - 1.25, E, -0.16, 0))) { L = k === 3 ? 0.8 : 0.3; A = 0; }                                      // the newel
+    const h = pj(C, F, 0.02, top - 1.52, 3.3), hx = (x - h.u) / h.k, hy = (y - h.v) / h.k;                                              // whoever it is. they have not moved
+    if (hypot(hx / 0.11, hy / 0.13) < 1 || (hy > 0.1 && hy < 1.52 && abs(hx) < (hy < 0.2 ? 0.05 : 0.2 - 0.04 * ss(0.3, 1.5, hy)))) { L = 0; A = 0; }
+    o[0] = L; o[1] = A;
+  };
   const T4 = [0, 0, 0, 0];
   S.cinema = (u, v, f, o) => {
     let L = 0.03 + 0.05 * fbm(u * 4, v * 4), A = 0, B = 0, M = 1;
@@ -1262,11 +1301,11 @@
     if (u > 0.3 && q < 1) L += 0.3 * (1 - q) * (0.6 + 0.4 * fbm(u * 20 + f, v * 20));
     if (wall(u, v, 0.12, 0.84, 0.1, 0.14, 0.52, 0.5)) {
       const s = W.s, t = W.t;
-      S.stairs(0.06 + s * 0.88, t, f, T4);                                                                                          // the film is the staircase on the landing page
-      M = 0; L = 0.22 + 0.78 * T4[0]; A = T4[1];
+      film(s * 1.8, t, f, T4);
+      M = 0; L = (0.1 + 0.9 * T4[0]) * (hash(floor(s * 90), f) > 0.97 ? 0.5 : 1); A = T4[1];                                             // scratched, a little
       if (s < 0.015 || s > 0.985 || t < 0.02 || t > 0.98) { L = 0.3; A = 0; }
     }
-    if (inBox(u, v, 0.885, 0.3, 0.965, 0.345)) { M = 0; L = 0; B = fr((u - 0.885) * 50) < 0.65 && abs(v - 0.3225) < 0.013 ? 1 : 0.35; }   // exit
+    if (inBox(u, v, 0.862, 0.292, 0.978, 0.352)) { const cx = floor((u - 0.87) / 0.0065), cy = floor((v - 0.3) / 0.0088); M = 0; L = 0; B = cx >= 0 && cx < 15 && cy >= 0 && cy < 5 && cx % 4 < 3 && (EXIT[cx >> 2][cy] >> (2 - (cx % 4))) & 1 ? 1 : 0.12; }   // EXIT
     else if (inBox(u, v, 0.89, 0.37, 0.96, 0.6)) { M = 0; L = u < 0.895 || v < 0.378 ? 0.2 : 0.01; }
     else B = 0.4 * exp(-hypot(u - 0.925, v - 0.33) * 22);
     for (let k = 0; k < 5; k++) {
@@ -1858,6 +1897,1084 @@
     o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
   };
 
+  // <<works
+  // --- things stood in real space ------------------------------------------------
+  // C = the eye: [centre across the page, horizon, focal length]. F = a frame on the floor plan: [x, z, turn]; everything built in one frame shares its vanishing points.
+  // rb = a box in that frame (x across, y down from the eye, z away), hit by the ray through this pixel. inn = seen from inside, so the far side is what shows.
+  // returns 0, or the face: 1 / 2 = its two x ends, 3 / 4 = its near and far z sides, 5 = top, 6 = underside. H = where: s, t across and down the face, x y z in the frame, d = how far
+  const H = { s: 0, t: 0, x: 0, y: 0, z: 0, d: 0 };
+  const rb = (u, v, C, F, x0, x1, y0, y1, z0, z1, inn) => {
+    const a = (u - C[0]) / C[2], b = (v - C[1]) / C[2] || 1e-6, c = cos(F[2]), s = sin(F[2]), ox = -F[0] * c - F[1] * s, oz = F[0] * s - F[1] * c, dx = a * c + s || 1e-6, dz = c - a * s || 1e-6;
+    let tn = -1e9, tf = 1e9, an = 0, af = 0, p = (x0 - ox) / dx, q = (x1 - ox) / dx;
+    if (p > q) { const w = p; p = q; q = w; } tn = p; tf = q;
+    p = y0 / b; q = y1 / b; if (p > q) { const w = p; p = q; q = w; } if (p > tn) { tn = p; an = 1; } if (q < tf) { tf = q; af = 1; }
+    p = (z0 - oz) / dz; q = (z1 - oz) / dz; if (p > q) { const w = p; p = q; q = w; } if (p > tn) { tn = p; an = 2; } if (q < tf) { tf = q; af = 2; }
+    const t = inn ? tf : tn, ax = inn ? af : an;
+    if (tn >= tf || t < 1e-3) return 0;
+    const x = ox + dx * t, y = b * t, z = oz + dz * t;
+    H.d = t; H.x = x; H.y = y; H.z = z;
+    if (ax === 0) { H.s = (z - z0) / (z1 - z0); H.t = (y - y0) / (y1 - y0); return abs(x - x0) < abs(x - x1) ? 1 : 2; }
+    if (ax === 2) { H.s = (x - x0) / (x1 - x0); H.t = (y - y0) / (y1 - y0); return abs(z - z0) < abs(z - z1) ? 3 : 4; }
+    H.s = (x - x0) / (x1 - x0); H.t = (z - z0) / (z1 - z0); return abs(y - y0) < abs(y - y1) ? 5 : 6;
+  };
+  // the ground (or any level y) in a frame: sets H.x, H.z, H.d. 0 if the ray never gets there
+  const gp = (u, v, C, F, y) => {
+    const b = (v - C[1]) / C[2], t = y / b;
+    if (!(t > 0) || t > 400) return 0;
+    const a = (u - C[0]) / C[2], c = cos(F[2]), s = sin(F[2]);
+    H.x = -F[0] * c - F[1] * s + (a * c + s) * t; H.z = F[0] * s - F[1] * c + (c - a * s) * t; H.y = y; H.d = t;
+    return t;
+  };
+  // where a point in a frame lands on the page: u, v, and k = how big a unit is there
+  const pj = (C, F, x, y, z) => { const c = cos(F[2]), s = sin(F[2]), k = C[2] / (F[1] + x * s + z * c); return { u: C[0] + (F[0] + x * c - z * s) * k, v: C[1] + y * k, k }; };
+  // how much of a lamp at (x, y, z) reaches the last hit: 1 at the lamp, falling off fast. r = its reach
+  const lamp = (x, y, z, r) => { const d2 = (H.x - x) ** 2 + (H.y - y) ** 2 + (H.z - z) ** 2; return (r * r) / (r * r + d2 * 3); };
+  const brick = (s, t, n) => (fr(t * n) < 0.14 || fr(s * n * 0.5 + (floor(t * n) & 1) * 0.5) < 0.07 ? 0.5 : 1);
+  const deep = (s, h0, h1) => (s * h1) / ((1 - s) * h0 + s * h1);
+
+  // --- works: the works from the quarry road, over its wall. shut forty years. one bay is lit, the gatehouse is lit, and the stack is drawing
+  S.works = (u, v, f, o) => {
+    const C = [0.4, 0.4, 0.95], F = [-1.6, 9.5, 0.6], E = 3.6, fl = [1, 0.85, 1, 0.9][f];
+    let L = 0.02 + 0.16 * ss(0.05, 0.4, v) * (0.5 + fbm(u * 2.5, v * 9)), A = 0, M = 1, D = 1e9, k;
+    const sm = pj(C, F, 9.6, E - 13.2, 7.6), sx = u - sm.u, sn = fbm(sx * 7 - f * 0.4, v * 9 + f * 0.2);
+    if (sx > 0 && abs(v - sm.v + 0.12 * sx) < (0.01 + 0.26 * sx) * sn * 1.4) L = 0.34 * sn + 0.1;                                       // smoke, lit a little from under
+    if ((k = rb(u, v, C, F, 9, 10.2, E - 13, E, 7, 8.2))) { M = 0; L = (k === 1 ? 0.75 : 0.12) * brick(H.s, H.t * 6, 5) * (H.t < 0.03 ? 1.3 : 1); }   // the stack
+    if (gp(u, v, C, F, E)) {                                                                                                         // the yard and the road: setts, and the siding run in through the gate
+      const lg = lamp(1.2, E, -6.2, 2.2);
+      M = 0; L = (hash(floor(H.x * 3 + (floor(H.z * 3) & 1) * 0.5), floor(H.z * 3)) > 0.5 ? 0.2 : 0.07) * ss(40, 6, H.d) + 0.6 * lg; A = 0.5 * lg * fl;
+      if (abs(abs(H.x - 3.5) - 0.42) < 0.07 && H.z < -0.3) { L = 0.85 * ss(30, 5, H.d); A = 0; }
+    }
+    for (let i = 7; i >= 0; i--) if ((k = rb(u, v, C, F, i * 2, i * 2 + 0.12, E - 6.6, E - 5.2, 0, 6)) === 1) { M = 0; L = fr(H.s * 6) < 0.1 || abs(H.t - 0.5) < 0.05 ? 0.2 : 0.7 - 0.03 * i; }   // north lights: the glass
+    if ((k = rb(u, v, C, F, 0, 16, E - 6.6, E - 5.2, 0, 0.3)) === 3 && H.t > fr(H.x / 2)) { M = 0; L = 0.26 * brick(H.x * 0.25, H.y * 0.25, 9); }                // and the saw of the wall under them
+    if ((k = rb(u, v, C, F, 0, 16, E - 5.2, E, 0, 6))) {
+      M = 0; A = 0;
+      if (k === 3) {                                                                                                                  // the long side: eight bays
+        const bx = fr(H.x / 2), bay = floor(H.x / 2), wy = (H.y - E + 4.3) / 2.7;
+        L = (0.72 - 0.025 * H.x) * brick(H.x * 0.25, H.y * 0.25, 9);
+        if (H.t < 0.03 || abs(bx - 0.03) < 0.03) L *= 1.6;                                                                             // coping, and a pier between each
+        if (bx > 0.22 && bx < 0.84 && wy > 0 && wy < 1) { const bar = fr((bx - 0.22) * 6.5) < 0.16 || fr(wy * 6) < 0.13; L = bar ? 0.85 - 0.03 * H.x : hash(bay * 9 + floor((bx - 0.22) * 6.5), floor(wy * 6)) < 0.25 ? 0 : 0.07; if (bay === 5 && !bar) { L = 0; A = fl; } }
+        if (H.t > 0.9) L *= 0.5;
+      } else if (k === 1) {                                                                                                           // the end wall, in its own shadow: the big door on its rail, and the lamp sign
+        L = 0.13 * brick(H.z * 0.25, H.y * 0.25, 9);
+        if (sigil((H.z - 3) / 0.85, (H.y - E + 4) / 0.85, 0, 0.15)) L = 0.9;
+        if (H.z > 1.6 && H.z < 4.4 && H.y > E - 2.6) L = H.y < E - 2.45 ? 0.75 : fr(H.z * 2.2) < 0.08 ? 0.02 : 0.06;
+        if (H.z > 3.2 && H.z < 4.4 && H.y > E - 2.45) L = 0;                                                                              // run back a yard
+      }
+    }
+    if ((k = rb(u, v, C, F, 5.6, 8, E - 2.8, E, -5, -3.3))) {                                                                              // the gatehouse
+      M = 0; A = 0; L = (k === 3 ? 0.55 : k === 1 ? 0.2 : 0.75) * (k === 5 ? 1 : brick(H.s * 0.6, H.t * 0.7, 9));
+      if (k === 3 && abs(H.s - 0.5) < 0.2 && H.t > 0.2 && H.t < 0.5) { L = abs(H.s - 0.5) < 0.012 || abs(H.t - 0.35) < 0.012 ? 0.3 : 0; if (L === 0) A = 0.9 * fl; }
+      if (k === 3 && H.t < 0.06) L = 1;
+    }
+    for (const [x0, x1] of [[-12, 2.2], [4.8, 5.6], [8, 26]]) {                                                                          // the wall along the road, and railings on it
+      if ((k = rb(u, v, C, F, x0, x1, E - 1.1, E, -5, -4.7))) { M = 0; A *= 0.3; L = (k === 5 ? 1 : k === 3 ? 0.5 + 0.4 * lamp(1.2, E - 3, -6.2, 2.5) : 0.2) * (k === 5 ? 1 : brick(H.x * 0.25, H.y * 0.25, 9)); }
+      if (rb(u, v, C, F, x0, x1, E - 2.1, E - 1.1, -4.88, -4.82) === 3 && (fr(H.x * 3.2) < 0.2 || H.t < 0.08 || (H.t > 0.5 && H.t < 0.56))) { M = 0; L = 0.03; A = 0; }
+    }
+    for (const gx of [2.2, 4.4]) if ((k = rb(u, v, C, F, gx, gx + 0.4, E - 2.6, E, -5.05, -4.65))) { M = 0; A = 0; L = (k === 3 ? 0.8 : k === 5 ? 1 : 0.25) * brick(H.s, H.t * 3, 5); }   // gate piers
+    if ((k = rb(u, v, C, F, 2.6, 2.66, E - 2.1, E, -4.9, -2.9)) && (fr(H.s * 7) < 0.25 || H.t < 0.07 || abs(H.t - 0.6) < 0.035)) { M = 0; L = k === 2 ? 0.5 : 0.04; A = 0; }   // one leaf, standing open into the yard
+    const lp = pj(C, F, 1.2, E - 4, -6.2), lr = hypot(u - lp.u, v - lp.v), ft = pj(C, F, 1.2, E, -6.2).v;
+    if (abs(u - lp.u) < 0.005 && v > lp.v && v < ft) { M = 0; L = u < lp.u ? 0.9 : 0.15; A = 0; }                                         // the lamp at the gate
+    if (inBox(u, v, lp.u - 0.018, lp.v - 0.034, lp.u + 0.018, lp.v + 0.004)) { M = 0; L = abs(u - lp.u) > 0.013 || v < lp.v - 0.028 ? 0.1 : 0; A = L ? 0 : fl; }
+    else A = max(A, 0.6 * fl * exp(-lr * 26));
+    o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // --- whistle: the boiler-house corner from the yard, looking up. the clock has no hands. the whistle goes at the same minute anyway
+  S.whistle = (u, v, f, o) => {
+    const C = [0.5, 0.86, 0.9], F = [0, 6.2, 0.785], E = 1.6, top = -3.2;
+    let L = 0.03 + 0.14 * ss(0, 0.7, v) * (0.5 + fbm(u * 3, v * 8)), A = 0, M = 1, k, D = 1e9;
+    if (gp(u, v, C, F, E)) { M = 0; L = (hash(floor(H.x * 2.5), floor(H.z * 2.5 + (floor(H.x * 2.5) & 1) * 0.5)) > 0.5 ? 0.24 : 0.1) * ss(30, 4, H.d); }
+    if ((k = rb(u, v, C, F, 0, 9, top, E, 0, 9))) {
+      M = 0; D = H.d;
+      if (k === 3) {                                                                                                                  // the side the moon is on
+        L = (0.62 - 0.03 * H.x) * brick(H.x * 0.3, H.y * 0.3, 8);
+        for (const [wx, wy] of [[2.2, -2.5], [5.2, -2.5], [2.2, -0.3]]) if (abs(H.x - wx - 0.7) < 0.7 && H.y > wy && H.y < wy + 1.7) L = abs(H.x - wx - 0.7) > 0.62 || H.y < wy + 0.08 || fr((H.x - wx) * 2.15) < 0.1 || fr((H.y - wy) * 1.8) < 0.09 ? 0.75 : 0.02;   // windows, small paned
+        if (H.y > 1.25) L *= 0.6;
+      } else if (k === 1) {                                                                                                           // the side it is not
+        const d = hypot(H.z - 3, H.y + 1.55) / 1.05, an = Math.atan2(H.y + 1.55, H.z - 3);
+        L = 0.17 * brick(H.z * 0.3, H.y * 0.3, 8);
+        if (d < 1.14) { L = d > 1 ? 0.95 : 0; A = d > 1 ? 0 : d < 0.08 || (d > 0.72 && d < 0.9 && abs(fr((an * 6) / PI + 0.5) - 0.5) < 0.1) ? 0 : 0.92; }   // the clock: twelve marks, a boss, and nothing to point with
+        if (abs(H.z - 6.2) < 0.75 && H.y > -0.75) { L = abs(H.z - 6.2) > 0.63 || H.y < -0.62 ? 0.5 : abs(H.z - 6.2) < 0.02 || abs(H.y - 0.3) < 0.03 ? 0.14 : 0.03; A = 0; }   // the boiler-house door
+        if (abs(H.z - 6.2) < 0.95 && H.y > 1.42) L = 0.45;
+      }
+    }
+    if ((k = rb(u, v, C, F, -0.35, 9, top - 0.3, top, -0.35, 9)) && H.d < D) { M = 0; A = 0; L = k === 6 ? 0.03 : k === 3 ? 0.95 : 0.4; }           // the eaves
+    const w = pj(C, F, 0.5, top - 0.3, 0.5), x = (u - w.u) / (w.k * 1.5), y = (v - w.v) / (w.k * 1.5) - 0.85;                                                // the whistle, on its pipe, above the corner: stem, valve, bell, cap
+    if (abs(x) < 0.07 && y > -1.3 && y < -0.85) { M = 0; L = x < -0.02 ? 0.9 : 0.25; }
+    if (abs(x) < 0.2 && y > -1.42 && y < -1.26) { M = 0; L = x < -0.08 ? 1 : 0.35; }
+    if (abs(x) < 0.17 && y > -2.2 && y < -1.56) { M = 0; L = (x < -0.07 ? 1 : x < 0.06 ? 0.55 : 0.2) * (abs(y + 1.9) < 0.025 ? 0.4 : 1); }
+    if (hypot(x, (y + 2.2) * 1.5) < 0.17 && y < -2.2) { M = 0; L = x < -0.05 ? 1 : 0.4; }
+    if (abs(x) < 0.03 && y > -2.5 && y < -2.3) { M = 0; L = 0.8; }
+    const jx = x - 0.17, jy = y + 1.49;                                                                                               // what comes out of it: hard, flat, straight
+    if (jx > 0 && jx < 3.4 && abs(jy + jx * 0.12) < 0.03 + jx * 0.2) { const ray = (jy + jx * 0.12) / (0.03 + jx * 0.2); if (fr(ray * 4.5 + f * 0.5) < 0.42 && hash(floor(ray * 4.5 + f * 0.5), floor(jx * 5 - f * 2)) > 0.25) L = ss(3.4, 1, jx) * [1, 1, 0.9, 0.5][f]; }
+    o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // --- chain: the gate, close to. the lock is still locked. it is the chain that has been cut: one link gone through on the slant, the metal still white
+  const LINKS = (u, v, x0, y0, n, o) => { for (let i = 0; i < n; i++) { const cy = y0 + i * 0.058, fl = i & 1, e = fl ? ell(u, v, x0, cy, 0.008, 0.04) : ell(u, v, x0, cy, 0.03, 0.04); if (e < (fl ? 1.3 : 1.2) && e > (fl ? 0 : 0.74)) { o[0] = e > (fl ? 1.08 : 1.12) ? 0 : fl ? (u < x0 ? 1 : 0.5) : u < x0 - 0.008 ? 0.95 : u > x0 + 0.012 ? 0.3 : 0.65; o[1] = 0; o[3] = 0; } } };
+  S.chain = (u, v, f, o) => {
+    const fl = f ? 0.55 : 1, lr = hypot(u - 0.9, v - 0.2);
+    let L = 0.03 + 0.1 * fbm(u * 3, v * 6) * ss(1, 0.2, v), A = 0.55 * fl * exp(-lr * 11), M = 1;
+    if (lr < 0.028) { L = 0; A = fl; }
+    if (abs(u - 0.9) < 0.004 && v > 0.22) L = 0.25;
+    if (wall(u, v, -0.05, 1.05, -0.4, 0.12, 1.5, 0.98)) {                                                                              // the gate, going away to the right
+      const q = deep(W.s, 1.9, 0.86), t = W.t, b = fr(q * 4.6);
+      if (b < 0.17) { M = 0; L = b < 0.045 ? 1 : b > 0.13 ? 0.02 : 0.28 + 0.1 * fbm(q * 9, t * 90); A = b > 0.13 ? A * 1.5 : 0; }
+      if (abs(t - 0.36) < 0.025 || abs(t - 0.86) < 0.025) { M = 0; L = fr(t * 20 - 0.25) < 0.5 ? 0.9 : 0.06; A = 0; }
+    }
+    o[0] = L; o[1] = A; o[3] = M;
+    for (const [x, y, n] of [[0.27, 0.3, 5], [0.62, 0.371, 4]]) { if (ell(u, v, x, y - 0.03, 0.062, 0.03) < 1 && ell(u, v, x, y - 0.03, 0.062, 0.03) > 0.7) { o[0] = v < y - 0.03 ? 0.9 : 0.3; o[1] = 0; o[3] = 0; } LINKS(u, v, x, y, n, o); }   // each end still wound round its bar
+    const kx = 0.62, ky = 0.603, sl = u - kx + (v - ky - 0.008) * 0.9, cu = v > ky + 0.008 && sl > 0 ? u + 0.006 : u, cv = v - (sl > 0 ? 0.012 : 0), ce = ell(cu, cv, kx, ky, 0.03, 0.04);   // the sheared link: gone through on the slant, and sprung
+    if (ce < 1.2 && ce > 0.74 && !(v > ky + 0.008 && abs(sl - 0.004) < 0.006)) { o[0] = v > ky + 0.008 && abs(sl - 0.004) < 0.011 ? 1 : ce > 1.12 ? 0 : u < kx - 0.008 ? 0.95 : u > kx + 0.012 ? 0.3 : 0.65; o[1] = 0; o[3] = 0; }
+    const lx = 0.27, ly = 0.66, sh = ell(u, v, lx, ly - 0.035, 0.04, 0.062);
+    if (sh < 1.28 && sh > 0.62 && v < ly + 0.01) { o[0] = sh > 1.1 ? 0 : u < lx ? 1 : 0.5; o[1] = 0; o[3] = 0; }                             // the padlock, hung on the last link
+    if (inBox(u, v, lx - 0.072, ly, lx + 0.072, ly + 0.15)) { o[1] = 0; o[3] = 0; o[0] = u < lx - 0.056 || v < ly + 0.014 ? 1 : u > lx + 0.058 || v > ly + 0.138 ? 0.08 : 0.42 + 0.14 * fbm(u * 40, v * 40); if (hypot(u - lx, v - ly - 0.06) < 0.02 || (abs(u - lx) < 0.008 && v > ly + 0.06 && v < ly + 0.11)) o[0] = 0; if (hypot(abs(u - lx) - 0.055, abs(v - ly - 0.075) - 0.058) < 0.008) o[0] = 1; }
+    o[2] = 0;
+  };
+
+  // --- flywheel: the engine house. bed, cylinder, crosshead, crank, and the big wheel going round. nothing is driving it. somebody has hung a red lamp on the steam chest
+  S.flywheel = (u, v, f, o) => {
+    const cx = 0.37, cy = 0.47, ph = f * 0.2618, bx = 0.89, by = 0.34, br = hypot(u - bx, v - by), red = exp(-br * 4);
+    let L = 0.04, A = 0, M = 0, k;
+    const lit = (l, sp) => { L = l; A = l > 0.45 ? sp * red * 0.9 : 0; if (A > 0.3) L *= 0.5; };
+    if (wall(u, v, -0.05, 1.05, -0.2, 0.04, 0.84, 0.66)) {                                                                             // the back wall, and the arch the moon comes through
+      const q = deep(W.s, 1.04, 0.62), t = W.t, ar = hypot((q - 0.2) / 0.085, (t - 0.38) / 0.2);
+      lit(0.16 * brick(q * 3, t, 18) * (1 - 0.5 * q), 0);
+      if ((ar < 1 && t < 0.38) || (abs(q - 0.2) < 0.085 && t >= 0.38 && t < 0.62)) { M = 1; A = 0; L = abs(q - 0.2) < 0.005 || fr(t * 11) < 0.12 ? 0.1 : 0.7; }
+    } else { const Z = 0.25 / max(v - 0.6, 1e-3), X = (u - 1.4) * Z; lit(fr(X * 1.5) < 0.05 || fr(Z * 1.5) < 0.05 ? 0.04 : 0.17 * ss(4, 0.4, Z), 0); if (ell(u, v, 0.45, 0.93, 0.36, 0.045) < 1) L = 0.01; }
+    for (const sd of [-1, 1]) if (dSeg(u, v, cx - 0.07 + sd * 0.015, cy - sd * 0.325, 0.02 + sd * 0.012, 0.02 - sd * 0.1) < 0.012) lit(fr((u - v) * 16 * sd - f * 0.25) < 0.5 ? 0.6 : 0.25, 0);   // the belt, away up through the wall
+    const far = hypot((u - cx + 0.075) / 0.19, (v - cy + 0.012) / 0.335), near = hypot((u - cx) / 0.19, (v - cy) / 0.335), an = Math.atan2((v - cy) / 0.335, (u - cx) / 0.19) + ph;
+    if (far < 1 && near > 0.86) lit(far > 0.86 ? 0.14 : 0.03, 0.3);                                                                    // the far rim, and the dark inside the wheel
+    if (near < 1 && far >= 1) lit(0.85, 0.9);
+    if (far < 1 && near >= 1) lit(u < cx - 0.1 ? 1 : 0.5 + 0.3 * fr((an * 12) / PI), 0.4);                                              // the face of the rim, a hand wide
+    if (near < 1) {
+      const sp = abs(fr((an * 3) / PI) - 0.5) * (near + 0.05);
+      if (near > 0.86) lit(near > 0.97 ? 0.3 : 0.92, 1);                                                                                // the near rim
+      else if (near < 0.2) lit(near < 0.07 ? 1 : near > 0.17 ? 0.3 : 0.6, 1);                                                           // the boss
+      else if (sp < 0.03) lit(sp < 0.01 ? 1 : 0.5, 0.8);                                                                                // six arms, oval, the light running down one edge of each
+    }
+    const px = cx + 0.19 * 0.34 * cos(ph * 4 * 0 + f * 1.5708), py = cy + 0.335 * 0.34 * sin(f * 1.5708), hx = 0.7 + 0.05 * cos(f * 1.5708);      // crank pin, connecting rod, crosshead
+    const bed = iso(u, v, 0.26, 0.97, 0.7, -0.17, -0.1, -0.05, 0.13);                                                                // the bed
+    if (bed) lit(bed === 3 ? 0.6 : bed === 1 ? (W.t < 0.12 ? 0.9 : fr(W.s * 9) < 0.08 ? 0.5 : 0.24) : 0.08, bed === 3 ? 0.7 : 0.3);
+    for (const sd of [-1, 1]) if (quad(u, v, cx - 0.012 + sd * 0.01, cy, cx + 0.02 + sd * 0.01, cy, cx + 0.07 + sd * 0.085, 0.84, cx - 0.01 + sd * 0.085, 0.84) && near > 0.2) lit(sd < 0 ? 0.75 : 0.32, 0.5);   // the pedestal, astride the shaft
+    if (dSeg(u, v, px, py, hx, 0.6) < 0.013) lit(dSeg(u, v, px, py - 0.006, hx, 0.594) < 0.006 ? 1 : 0.4, 1);
+    if (hypot(u - px, v - py) < 0.024) lit(1, 1);
+    if (inBox(u, v, hx - 0.03, 0.57, hx + 0.03, 0.635)) lit(v < 0.585 ? 1 : 0.5, 1);
+    if (inBox(u, v, 0.62, 0.64, 0.8, 0.655) || inBox(u, v, 0.62, 0.552, 0.8, 0.566)) lit(0.8, 1);                                         // slide bars
+    if (inBox(u, v, 0.8, 0.5, 0.97, 0.7)) { const y = (v - 0.6) / 0.1; lit((0.9 - 0.7 * abs(y + 0.3)) * (fr(u * 34) < 0.16 ? 0.5 : 1), 1.2); }   // the cylinder, lagged and banded
+    if (inBox(u, v, 0.83, 0.4, 0.95, 0.5)) lit(u < 0.845 || v < 0.415 ? 1 : 0.35, 1.2);                                                 // steam chest
+    if (ell(u, v, 0.985, 0.6, 0.03, 0.1) < 1) lit(0.25, 0.6);
+    if (abs(u - bx) < 0.004 && v > by && v < 0.4) lit(0.8, 0);
+    if (br < 0.022) { L = 0; A = 1; M = 0; } else A = max(A, 0.75 * exp(-br * 22));
+    o[0] = L; o[1] = min(A, 1); o[2] = 0; o[3] = M;
+  };
+
+  // --- the works, the ground under it, and the rooms nobody goes up or down to ---
+  // a box in true perspective. C = [centre, horizon, focal]; x across (0 = the eye), y down from the eye, z away.
+  // returns 1 (front), 2 (the side toward the eye), 3 (top, or underside if it is overhead) or 0; W.s / W.t = across and down (or away along) that face
+  const pb = (u, v, C, x0, x1, y0, y1, z0, z1) => {
+    const a = (u - C[0]) / C[2], b = (v - C[1]) / C[2];
+    let X = a * z0, Y = b * z0;
+    if (X >= x0 && X < x1 && Y >= y0 && Y < y1) { W.s = (X - x0) / (x1 - x0); W.t = (Y - y0) / (y1 - y0); return 1; }
+    const xs = x1 < 0 ? x1 : x0 > 0 ? x0 : 0, ys = y0 > 0 ? y0 : y1 < 0 ? y1 : 0;
+    if (xs && a * xs > 0) { const Z = xs / a; Y = b * Z; if (Z >= z0 && Z < z1 && Y >= y0 && Y < y1) { W.s = (Z - z0) / (z1 - z0); W.t = (Y - y0) / (y1 - y0); return 2; } }
+    if (ys && b * ys > 0) { const Z = ys / b; X = a * Z; if (Z >= z0 && Z < z1 && X >= x0 && X < x1) { W.s = (X - x0) / (x1 - x0); W.t = (Z - z0) / (z1 - z0); return 3; } }
+    return 0;
+  };
+  // --- looms: the weaving shed, down the alley beside the frames, from the overlooker's step. every one of them running. once a loop somebody is minding the last
+  const SHED = [0.7, 0.26, 0.85];
+  S.looms = (u, v, f, o) => {
+    const C = SHED, a = (u - C[0]) / C[2], b = (v - C[1]) / C[2];
+    let L = 0.03, A = 0, M = 1;
+    if (b > 0) {                                                                                                                      // boards, and the moon laid across them through the bays
+      const Z = 2.2 / b, X = a * Z, bay = fr(Z * 0.3 - X * 0.3);
+      M = 0; L = (fr(X * 2.5) < 0.1 ? 0.06 : 0.2) * ss(16, 2, Z);
+      if (X > -0.5 && X < 1.3 && bay < 0.45 && Z < 15) L = (abs(fr(bay * 6.7) - 0.5) > 0.4 ? 0.3 : 0.85) * ss(17, 4, Z);
+    } else { const Z = -1.4 / b; M = 0; L = fr(Z * 0.3) < 0.08 && Z < 16 ? 0.4 : 0.07; }                                               // the roof, truss by truss
+    if (a > 0) { const Z = 1.3 / a, Y = b * Z, wq = fr(Z * 0.3); if (Y > -1.4 && Y < 2.2 && Z < 16) { M = 0; L = 0.12; if (wq < 0.5 && Y > -1 && Y < 1) { M = 1; L = fr(wq * 6) < 0.14 || fr(Y * 2.1) < 0.12 ? 0.12 : 0.75 * ss(16, 2, Z); } } }   // the window wall
+    for (let k = 6; k >= 0; k--) {
+      const z = 2.3 + k * 1.9, dim = ss(17, 3, z), fc = pb(u, v, C, -2.5, -0.55, 1.1, 2.2, z, z + 1.2), s = W.s, t = W.t, by = 0.3 + 0.1 * [0, 1, 2, 1][(f + k) & 3];
+      if (fc === 1) { M = 0; L = (s > 0.95 || t < 0.07 ? 0.8 : t > 0.3 && t < 0.6 ? 0.55 - 1.5 * abs(t - 0.45) : fr(s * 9) < 0.12 ? 0.3 : 0.05) * dim; }   // the breast beam and the cloth wound on under it
+      else if (fc === 2) { M = 0; L = (t < 0.07 || s < 0.05 || s > 0.95 ? 0.5 : abs(ell(s, t, 0.5, 0.6, 0.3, 0.3) - 0.8) < 0.2 || abs(s - 0.5) < 0.03 ? 0.4 : 0.1) * dim; }   // the end frame, and its wheel
+      else if (fc === 3) { M = 0; L = (s < 0.03 || s > 0.97 ? 0.9 : abs(t - by) < 0.05 ? 1 : t > 0.75 ? 0.75 : fr(s * 30) < 0.45 ? 0.6 : 0.12) * dim; }   // warp, cloth, and the lay beating up
+      const sc = C[2] / (z + 0.6), bx = C[0] - 1.5 * sc, bt = C[1] - 1.4 * sc, bb = C[1] + 1.1 * sc;
+      if (v > bt && v < bb && abs(abs(u - bx) - 0.05 * sc) < 0.012 * sc + 0.002) { M = 0; L = (fr(v * 30 * (u < bx ? 1 : -1) - f * 0.25) < 0.5 ? 0.6 : 0.2) * dim; }   // its belt down from the shaft, running
+      if (k === 6 && f === 3 && (hypot((u - bx - 0.075) * 1.6, v - C[1] - 0.012) < 0.012 || inBox(u, v, bx + 0.065, C[1] + 0.02, bx + 0.086, C[1] + 0.11))) { M = 0; L = 0; }
+    }
+    const lr = hypot(u - 0.22, (v - 0.1) * 1.2);
+    if (abs(u - 0.22) < 0.003 && v < 0.08) { M = 0; L = 0.5; }
+    if (lr < 0.03) { M = 0; L = 0; A = 1; } else A = 0.55 * exp(-lr * 15) * (v > 0.08 ? 1 : 0.3);
+    o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
+  };
+  // works>>
+
+  // <<works2
+  // --- paywin: the pay office hatch. brass bars, a lamp lit behind them, the packets set out on the sill. now and then somebody looks round the side of it
+  const PAY = [[7, 5, 7, 4, 4], [7, 5, 7, 5, 5], [5, 5, 2, 2, 2]];
+  S.paywin = (u, v, f, o) => {
+    const C = [0.5, 0.54, 1.05], F = [0.45, 3.3, -0.45], E = 1.5, fl = [1, 0.9, 1, 0.94, 0.9, 1, 0.94][f];
+    let L = 0.02, A = 0, B = 0, M = 0, k;
+    if (gp(u, v, C, F, E) && H.z < 0) L = (fr(H.x * 3) < 0.07 ? 0.03 : 0.13) * ss(8, 1.5, H.d);                                           // boards
+    if ((k = rb(u, v, C, F, -9, 9, -5, E, 0, 1)) === 3) {
+      const x = H.x, y = H.y, lg = lamp(0, -0.1, -0.1, 0.75), ar = y < -0.45 ? hypot(x, y + 0.45) : abs(x), lx = floor(((x + 0.45) / 0.9) * 11), ly = floor(((y + 1.66) / 0.32) * 5);
+      L = (y > 0.62 ? 0.07 : 0.15) * (fr(x * 4.5) < 0.07 ? 0.4 : 1) + 0.5 * lg;                                                          // matchboard, and a dado under it
+      if (abs(y - 0.62) < 0.035) L = 0.5 + 0.4 * lg;
+      if (abs(x) < 0.55 && y > -1.74 && y < -1.26) L = 0.04;
+      if (lx >= 0 && lx < 11 && ly >= 0 && ly < 5 && lx % 4 < 3 && (PAY[lx >> 2][ly] >> (2 - (lx % 4))) & 1) L = 0.9;                    // PAY
+      if (ar < 0.68 && y > -1.13 && y < 0.25) {
+        L = 0.95 - 0.5 * ss(0.58, 0.68, ar);                                                                                           // the architrave
+        if (ar < 0.56 && y > -1.01) {
+          L = x < -0.47 ? 0.3 : 0; A = L ? 0 : fl * (0.03 + 0.97 * exp(-hypot(x - 0.16, (y + 0.3) * 0.8) * 6.5));                           // inside: one lamp, and not much of the room
+          if (f > 2) { const d = f > 3 ? 0.17 : 0.07, hx = 0.6 - d + (y + 0.3) * 0.2; if (hypot((x - hx) / 0.17, (y + 0.42) / 0.22) < 1 || (y > -0.27 && x > hx - 0.05 - max(0, y + 0.16) * 0.7)) { L = 0; A = 0; } }   // a face, round the edge
+          if (fr(x * 5.4 + 0.5) < 0.14 || abs(y + 0.45) < 0.02) { L = fr(x * 5.4 + 0.5) < 0.05 ? 1 : 0.45; A = 0; }                        // the bars
+        }
+      }
+    }
+    for (const bx of [-0.6, 0.52]) if ((k = rb(u, v, C, F, bx, bx + 0.08, 0.32, 0.62, -0.3, 0)) && H.t < 1 - H.s * 0.8) L = k === 3 ? 0.5 : 0.2;   // brackets
+    if ((k = rb(u, v, C, F, -0.78, 0.78, 0.24, 0.32, -0.42, 0))) {                                                                      // the sill, and what is owing
+      L = k === 5 ? 0.92 : k === 3 ? 0.4 : 0.18; A = 0;
+      if (k === 5) { const e = fr(H.s * 6), n = floor(H.s * 6); if (e > 0.16 && e < 0.84 && H.t > 0.2 && H.t < 0.8) { L = e < 0.22 || H.t > 0.74 ? 0.15 : abs(H.t - 0.45 - abs(e - 0.5) * 0.5) < 0.03 ? 0.3 : 0.6; if (n === 3) { L = 0; B = 1; } } }
+    }
+    o[0] = L; o[1] = A; o[2] = B; o[3] = M;
+  };
+
+  // --- keys: the key board in the pay office. a hook for every door in the works, a brass tag on each. one hook is bare. one key will not hang still
+  S.keys = (u, v, f, o) => {
+    const C = [0.4, 0.5, 1.0], F = [-0.4, 3.0, 0.5], E = 1.6;
+    let L = 0.02, A = 0, B = 0, M = 0;
+    if (rb(u, v, C, F, -9, 9, -5, E, 0, 1) === 3) {
+      const x = H.x, y = H.y, lg = lamp(-1.5, -0.9, -1.1, 1.5);
+      L = 0.05 * (fr(x * 4) < 0.07 ? 0.4 : 1) + 0.16 * lg;
+      if (abs(x) < 2.42 && abs(y) < 1.47) {
+        const i = floor((x + 2.3) / 0.46), j = floor((y + 1.35) / 0.54), py = fr((y + 1.35) / 0.54) * 0.54, sw = i === 6 && j === 2 && f === 3 ? 0.07 : 0, px = (fr((x + 2.3) / 0.46) - 0.5) * 0.46 - sw * max(0, py - 0.07), lt = 0.5 + 0.5 * lg;
+        L = abs(x) > 2.3 || abs(y) > 1.35 ? 0.3 + 0.6 * lg : 0.03 + 0.1 * lg * (0.6 + 0.8 * fbm(x * 3, y * 40));                             // the board, dark wood in a moulded frame
+        if (abs(x) < 2.3 && abs(y) < 1.35) {
+          const bare = i === 3 && j === 3, mine = i === 7 && j === 1, rg = hypot(px, py - 0.18);
+          if (hypot(px + sw * max(0, py - 0.07), py - 0.07) < 0.03) L = 1;                                                               // the hook
+          else if (!bare && ((rg < 0.07 && rg > 0.036) || (abs(px) < 0.016 && py > 0.24 && py < 0.45) || (px > 0 && px < 0.07 && py > 0.37 && py < 0.45 && fr(py * 26) < 0.6))) { L = (px < -0.004 ? 1 : 0.6) * lt; if (mine) { L = 0; A = abs(py - 0.16 - 0.1 * (f % 3)) < 0.03 ? 0.6 : 1; } }   // ring, shank, bit. the one that is lit has a light going down it
+          else if (!bare && hypot(px + 0.12, py - 0.33) < 0.055) { L = (hypot(px + 0.12, py - 0.33) > 0.042 ? 0.5 : 0.85 - 0.3 * hash(i, j)) * lt; if (hypot(px + 0.12, py - 0.31) < 0.012) L = 0; }   // its tag
+          else if (!bare && dSeg(px, py, -0.03, 0.2, -0.1, 0.29) < 0.006) L = 0.35 * lt;
+          else if (!bare && (hypot(px - 0.03, py - 0.2) < 0.07 || (abs(px - 0.03) < 0.016 && py > 0.24 && py < 0.47))) L = 0.01;            // and its shadow, thrown right
+        }
+      }
+    }
+    o[0] = L; o[1] = A; o[2] = B; o[3] = M;
+  };
+
+  // --- coat: the pegs by the door. one coat, a cap, a tin and a mug on the bench under them. the tea is still hot
+  S.coat = (u, v, f, o) => {
+    const C = [0.46, 0.5, 1.0], F = [0.25, 3.3, -0.42], E = 1.5, bl = pj(C, F, -0.55, -1.0, -0.8), bu = bl.u, bv = bl.v, br = hypot(u - bu, v - bv);
+    let L = 0.02, A = 0, M = 0, k;
+    if (gp(u, v, C, F, E) && H.z < 0) L = (fr(H.x * 2.6) < 0.07 ? 0.03 : 0.1 + 0.3 * lamp(-0.55, E, -0.8, 1.2)) * ss(8, 1.5, H.d);
+    if (rb(u, v, C, F, -9, 9, -5, E, 0, 1) === 3) {
+      const x = H.x, y = H.y, lg = lamp(-0.55, -1.0, -0.8, 1.3), yy = y + 0.6, cx = x - 0.1, hw = yy < 0 ? 0 : 0.1 + 0.26 * ss(0, 0.16, yy) + 0.07 * ss(0.3, 1.5, yy);
+      L = (y > 0.45 ? 0.05 : 0.1) * (fr(x * 4.5) < 0.07 ? 0.35 : 1) + (y > 0.45 ? 0.3 : 0.62) * lg * (fr(x * 4.5) < 0.07 ? 0.5 : 1);        // matchboard, lit only near the bulb
+      if (abs(y - 0.45) < 0.03) L = 0.3 + 0.6 * lg;
+      if (y > -0.74 && y < -0.6) L = y < -0.72 ? 0.5 + 0.5 * lg : 0.12 + 0.5 * lg;                                                        // the peg rail
+      for (let i = -3; i < 4; i++) { const px = i * 0.8 + 0.1; if (hypot(x - px, y + 0.62) < 0.045) L = hypot(x - px + 0.012, y + 0.632) < 0.022 ? 1 : 0.02; }
+      if (yy > 0 && yy < 1.56 && abs(cx) < hw && !(yy > 1.5 && fr(cx * 7) < 0.4)) {                                                       // the coat, heavy, the shoulders still in it
+        L = cx < -hw + 0.05 ? 0.75 + 0.25 * lg : 0.03 + 0.07 * fbm(cx * 12, yy * 3) + (abs(fr(cx * 4.2 + 0.2 * sin(yy * 3)) - 0.5) < 0.05 && yy > 0.4 ? 0.18 : 0);
+        if (yy < 0.42 && abs(abs(cx) - 0.02 - yy * 0.3) < 0.02) L = 0.6;                                                                 // lapels
+        if (abs(cx - 0.03) < 0.022 && fr(yy * 3.2) < 0.14 && yy > 0.45) L = 0.95;                                                         // buttons
+        if (abs(cx + hw - 0.15) < 0.012 && yy > 0.25 && yy < 1.2) L = 0.35;                                                               // the sleeve, hanging
+        if (yy < 0.1 && abs(cx) < 0.06) L = 0.01;
+      } else if (yy > 0 && yy < 1.56 && abs(cx - 0.09) < hw) L *= 0.3;                                                                   // its shadow
+      const kx = x - 0.9, ky = y + 0.45;
+      if ((ky > -0.14 && ky < 0 && abs(kx) < 0.19 - (ky + 0.14) * 0.2) || (ky >= 0 && ky < 0.05 && kx > -0.3 && kx < 0.2)) L = ky < -0.1 ? 0.6 + 0.3 * lg : 0.02;   // a cap
+    }
+    for (const lx of [-1.15, 1.25]) if ((k = rb(u, v, C, F, lx, lx + 0.1, E - 0.5, E, -0.62, -0.12))) L = k === 3 ? 0.3 : 0.08;            // bench
+    if ((k = rb(u, v, C, F, -1.3, 1.45, E - 0.56, E - 0.5, -0.66, -0.08))) L = k === 5 ? 0.35 + 0.65 * lamp(-0.55, E - 0.56, -0.8, 1.1) : k === 3 ? 0.5 : 0.15;
+    if ((k = rb(u, v, C, F, 0.25, 0.8, E - 0.8, E - 0.56, -0.5, -0.22))) L = k === 5 ? (abs(H.s - 0.5) < 0.2 && abs(H.t - 0.5) < 0.15 ? 0.35 : 0.9) : k === 3 ? (H.t < 0.3 ? 0.75 : 0.4) : 0.12;   // dinner tin
+    const m = pj(C, F, -0.42, E - 0.56, -0.36), mx = (u - m.u) / m.k, my = (v - m.v) / m.k;                                             // the mug
+    if ((abs(mx) < 0.11 && my > -0.24 && my < 0.045) || (abs(hypot(mx - 0.1, (my + 0.1) * 1.1) - 0.055) < 0.034 && mx > 0.085)) L = 0.01;                  // dark all round it, so it stands off the bench
+    if (abs(mx) < 0.085 && my > -0.2 && my < 0.02 * (1 - (mx / 0.085) ** 2)) L = mx < -0.04 ? 1 : mx > 0.045 ? 0.3 : 0.8;
+    if (abs(hypot(mx - 0.1, (my + 0.1) * 1.1) - 0.055) < 0.014 && mx > 0.085) L = 0.9;
+    if (hypot(mx / 0.085, (my + 0.2) / 0.028) < 1) L = hypot(mx / 0.085, (my + 0.2) / 0.028) > 0.72 ? 1 : 0;
+    const sy = -my - 0.22, sxx = mx + 0.05 * sy * sin(sy * 3 + f * 0.6);                                                               // and what comes off it: thin, breaking up as it rises
+    if (sy > 0 && sy < 1.5 && abs(sxx) < 0.03 + 0.11 * sy && fbm(sxx * 14 + f * 0.3, sy * 7 - f * 0.8) > 0.46 + 0.1 * sy + 1.6 * abs(sxx) / (0.03 + 0.11 * sy) * 0.1) { L = 0.55 + 0.45 * ss(1.5, 0.2, sy); M = 1; }
+    if (abs(u - bu) < 0.003 && v < bv) L = 0.4;
+    if (br < 0.024) { L = 0; A = 1; } else A = 0.85 * exp(-br * 27);
+    o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // --- ledger: the wages book, open on the desk under a lantern. forty years of the same names. the last line is still wet
+  S.ledger = (u, v, f, o) => {
+    const fl = [1, 0.9, 0.97, 0.85][f], Z = 1.3 / (v + 0.3), X = ((u - 0.5) * Z) / 1.3, dl = hypot(X + 0.34, (Z - 1.2) * 0.9), lit = fl * exp(-dl * 1.15), fd = hypot((u - 0.13) / 0.9, v - 0.63), a = -0.14, bk = (dz) => { const c = cos(a), s = sin(a), x = ((X - 0.26) * c + (Z + dz - 1.68) * s) / 0.6, y = ((1.68 - Z - dz) * c + (X - 0.26) * s) / 0.4; return [x, y]; };
+    let L = (0.03 + 0.06 * fbm(X * 3, Z * 40)) * (1 + 6 * lit), A = 0, M = 0;
+    if (Z > 2.75) L = 0.01;                                                                                                          // the far edge of the desk
+    const [x, y0] = bk(0), [x2, y2] = bk(0.07), px = abs(x), hump = exp(-(((px - 0.2) / 0.15) ** 2)), y = y0 + 0.1 * hump - 0.13 * exp(-px * 13) * (px < 1 ? 1 : 0), row = floor((1 - y) * 8), ry = fr((1 - y) * 8);   // the leaves lift off the boards, crest, and go down into the gutter
+    if (abs(x2 - 0.12) < 1.1 && abs(y2) < 1.1 && !(px < 1.06 && abs(y) < 1.08)) L *= 0.2;                                               // the shadow it throws away from the flame
+    if (px < 1.06 && abs(y2) < 1.08 && y < -1) L = px > 1 ? 0.2 : fr(y2 * 22) < 0.5 ? 0.75 * (0.4 + 0.6 * lit) : 0.35;                     // the fore-edge: forty years of leaves
+    if (px < 1.06 && (abs(y0) < 1.08 || (px < 1 && abs(y) < 1))) {
+      L = 0.03 + 0.1 * lit;                                                                                                            // the boards, an inch proud of the paper all round
+      if (px < 1 && abs(y) < 1) {
+        L = (0.62 + 0.38 * lit) * (1 - 0.85 * exp(-px * 13)) * (1 - 0.25 * ss(0.7, 1, px)) * (x < 0 ? 1 + 0.3 * hump * ss(0.2, 0.08, px) - 0.35 * hump * ss(0.2, 0.34, px) : 1 - 0.3 * hump * ss(0.2, 0.08, px) + 0.25 * hump * ss(0.2, 0.34, px));   // lit on the slope that faces the lantern                                                // the page, rolling down into the gutter
+        if (ry < 0.09 || abs(px - 0.66) < 0.007 || abs(px - 0.82) < 0.007) L *= 0.6;                                                    // ruled, and cash columns
+        const last = x > 0 && row === 9;
+        if (row === 0 ? ry > 0.3 && px > 0.25 && px < 0.75 && hash(floor(px * 12), 3) > 0.3 : row < (x > 0 ? 10 : 15) && ry > 0.4 && ry < 0.7 && px > 0.07 && px < 0.94 && hash(floor(x * 44), row) > (px > 0.64 ? 0.55 : 0.3) && hash(floor(x * 7.5), row + 20) > 0.2) { L = 0.02; if (last) A = 1; }
+        if (last && x > 0.5 && x < 0.56 && ry > 0.1) { L = 0; A = 1; }
+      }
+      if (px < 0.012) L = 0.03;
+    }
+    if (dSeg(X, Z, 0.52, 1.36, 0.9, 1.62) < 0.012) { L = X < 0.6 ? 0.02 : 0.95; A = 0; }                                                 // the pen, put down across the corner
+    const iw = ell(u, v, 0.84, 0.3, 0.05, 0.028);
+    if (inBox(u, v, 0.79, 0.3, 0.89, 0.37) || ell(u, v, 0.84, 0.37, 0.05, 0.028) < 1) L = u < 0.81 ? 0.6 : 0.2;                          // inkwell
+    if (iw < 1) L = iw > 0.7 ? 0.7 : 0;
+    const lx = 0.13, gy = (v - 0.63) / 0.1, gw = 0.052 * Math.sqrt(max(0, 1 - gy * gy * 0.8)) + 0.01;                                 // the lantern: tank, burner, globe in its wires, cap, bail
+    if (ell(u, v, lx, 0.84, 0.075, 0.028) < 1 || inBox(u, v, lx - 0.075, 0.77, lx + 0.075, 0.84)) { L = u < lx - 0.045 ? 1 : 0.5 - 2 * (u - lx); A = 0; }
+    if (ell(u, v, lx, 0.77, 0.075, 0.028) < 1) L = 0.85;
+    if (inBox(u, v, lx - 0.03, 0.725, lx + 0.03, 0.775)) { L = u < lx - 0.01 ? 0.9 : 0.35; A = 0; }
+    if (abs(gy) < 1 && abs(u - lx) < gw) { L = abs(u - lx) > gw - 0.006 ? 0.9 : 0; A = L ? 0 : 0.75 * fl; }
+    if (abs(gy) < 1.15 && (abs(abs(u - lx) - gw - 0.012) < 0.0035)) { L = 0.8; A = 0; }
+    if (inBox(u, v, lx - 0.04, 0.5, lx + 0.04, 0.535) || inBox(u, v, lx - 0.02, 0.47, lx + 0.02, 0.5)) { L = u < lx - 0.015 ? 0.9 : 0.3; A = 0; }
+    if (abs(ell(u, v, lx, 0.47, 0.085, 0.13) - 1) < 0.045 && v < 0.5) { L = 0.75; A = 0; }
+    const fe = ell(u, v, lx + 0.003 * [0, 1, 0, -1][f], 0.66, 0.014, 0.04);
+    if (fe < 1) { L = 0; A = 1; } else if (A < 0.9 && !(L > 0.3 && A === 0)) A = max(A, 0.6 * fl * exp(-fd * 19));
+    o[0] = L; o[1] = min(A, 1); o[2] = 0; o[3] = M;
+  };
+
+  // --- timeclock: the clock by the wicket, and the rack beside it under one shaded bulb. every pocket has a card in it. the pale one has been punched tonight
+  S.timeclock = (u, v, f, o) => {
+    const C = [0.5, 0.52, 1.0], F = [-0.35, 3.0, 0.45], E = 1.5, lp = [0.25, -1.28, -0.6], bl = pj(C, F, lp[0], lp[1], lp[2]), br = hypot(u - bl.u, v - bl.v), fl = [1, 0.92, 1, 0.96][f];
+    let L = 0.02, A = 0, B = 0, M = 0, k;
+    const lg = (r) => fl * lamp(lp[0], lp[1], lp[2], r || 2.1);
+    if (gp(u, v, C, F, E) && H.z < 0) L = (fr(H.x * 2.6) < 0.07 ? 0.03 : 0.08 + 0.3 * lg()) * ss(8, 1.5, H.d);
+    if (rb(u, v, C, F, -9, 9, -5, E, 0, 1) === 3) {
+      L = (0.02 + 0.42 * lg(1.7)) * brick(H.x * 0.5, H.y * 0.5, 7);
+      if ((abs(H.x - 0.14) < 0.52 && H.y > -1.05 && H.y < 0.82) || (H.x > 0.88 && H.x < 2.34 && H.y > -0.95 && H.y < 0.98)) L *= 0.12;         // what the case and the rack throw on the wall
+    }
+    if ((k = rb(u, v, C, F, 0.8, 2.12, -1.0, 0.76, -0.1, 0))) {                                                                          // the rack: two rows of ten
+      const l = 0.45 + 0.55 * lg();
+      if (k !== 3) L = k === 1 ? 0.12 : l;
+      else {
+        const i = floor(H.s * 2), j = floor(H.t * 10), cx = fr(H.s * 2), cy = fr(H.t * 10), mine = i === 0 && j === 6;
+        L = (cx < 0.06 || cx > 0.94 ? 1 : 0.02) * l;
+        if (cx > 0.1 && cx < 0.9) {
+          if (cy < 0.6) { L = (cy < 0.1 ? 1 : 0.78 - 0.2 * hash(i, j)) * l; if (cy > 0.2 && cy < 0.5 && hash(floor(cx * 16), i * 31 + j) > 0.45 && cx < 0.72) L = 0.08; if (mine) { B = cy > 0.2 && cy < 0.5 && cx < 0.7 && hash(floor(cx * 16), 7) > 0.4 ? 0 : 1; L = 0; } }   // a card, its name end up
+          else L = (cy < 0.68 ? 1 : cy > 0.92 ? 0.02 : 0.14 + 0.16 * fr(cx * 3)) * l;                                                                      // the tin pocket it sits in
+        }
+      }
+    }
+    if ((k = rb(u, v, C, F, -0.42, 0.42, -1.1, 0.55, -0.34, 0))) {                                                                       // the clock, in its oak case
+      const l = 0.45 + 0.55 * lg(), x = H.x, y = H.y, d = hypot(x, y + 0.6) / 0.33, an = Math.atan2(y + 0.6, x);
+      if (k === 5) L = l;
+      else if (k === 1) L = H.t < 0.03 || H.s < 0.06 ? 0.6 * l : 0.05 + 0.05 * fbm(H.s * 4, H.t * 50);
+      else if (k === 3) {
+        L = (abs(x) > 0.38 || y < -1.05 || y > 0.5 ? 1 : abs(x) > 0.345 || y < -1.01 || y > 0.46 ? 0.06 : 0.3 + 0.14 * fbm(x * 6, y * 40)) * l;                                         // moulded edge, figured panel
+        if (d < 1.2) { L = (d > 1.12 ? 0.04 : d > 1 ? 0.6 : hypot(x + 0.1, y + 0.72) < 0.1 ? 1.3 : 1) * l; if (d < 1 && ((d > 0.76 && d < 0.9 && abs(fr((an * 6) / PI + 0.5) - 0.5) < 0.09) || d < 0.07 || (d < 0.5 && abs(fr((an + 2.2) / (2 * PI) + 0.5) - 0.5) < 0.016 / max(d, 0.1)) || (d < 0.72 && abs(fr((an + 0.3 - f * 0.105) / (2 * PI) + 0.5) - 0.5) < 0.011 / max(d, 0.1)))) L = 0; }   // the dial
+        if (abs(y + 0.08) < 0.06 && abs(x) < 0.3) L = abs(y + 0.08) < 0.022 && abs(x) < 0.24 ? 0 : 0.95 * l;                              // brass, and the slot the card goes in
+        if (abs(y - 0.24) < 0.1 && abs(x) < 0.22) L = (abs(y - 0.24) > 0.08 || abs(x) > 0.2 ? 0.05 : fr(y * 40) < 0.4 ? 1 : 0.5) * l;     // the maker's plate
+      }
+    }
+    if ((k = rb(u, v, C, F, -0.6, -0.42, -0.14, -0.05, -0.24, -0.16))) L = (k === 5 ? 1 : 0.5) * (0.3 + 0.7 * lg());                      // the lever
+    const kn = pj(C, F, -0.62, -0.1, -0.2); if (hypot(u - kn.u, v - kn.v) < 0.05 * kn.k) L = hypot(u - kn.u + 0.004, v - kn.v + 0.004) < 0.02 * kn.k ? 1 : 0.35;
+    if (abs(u - bl.u) < 0.003 && v < bl.v - 0.03) L = 0.4;
+    if (v > bl.v - 0.04 && v < bl.v && abs(u - bl.u) < 0.012 + (v - bl.v + 0.04) * 1.1) { L = u < bl.u ? 0.7 : 0.2; A = 0; }                // its shade, enamel, a cone
+    else if (hypot(u - bl.u, (v - bl.v - 0.008) * 1.2) < 0.016) { L = 0; A = fl; } else A = 0.6 * fl * exp(-br * 22) * (v > bl.v ? 1 : 0.15);
+    o[0] = L; o[1] = A; o[2] = B; o[3] = M;
+  };
+
+  // --- halt: the works halt, from the platform. the name on the board painted out, and a steel freight box stood on the flags with its doors a hand apart. there is a light on inside it, low down. once a loop somebody stands in it
+  const DOOR = (s, t) => (t < 0.03 || t > 0.97 || s < 0.04 || s > 0.96 ? 0.95 : abs(abs(s - 0.5) - 0.2) < 0.022 ? (abs(t - 0.56) < 0.05 ? 0.3 : 1) : abs(t - 0.56) < 0.016 && abs(s - 0.5) < 0.3 ? 0.9 : s > 0.9 && fr(t * 4.5) < 0.22 ? 0.9 : fr(t * 9) < 0.14 ? 0.1 : 0.34);   // a leaf: frame, two lock rods and their handles, hinges, ribs
+  S.halt = (u, v, f, o) => {
+    const C = [0.4, 0.36, 0.95], F = [-0.09, 4.94, 1.035], P = 1.6, R = 2.6, T = P - 2.6, G = [F[0] - sin(F[2]), F[1] + cos(F[2]), F[2] - 0.32], fl = [1, 0.92, 1, 1][f];
+    let L = 0.02 + 0.12 * ss(0, 0.36, v) * (0.5 + fbm(u * 2, v * 9)), A = 0, M = 1, k;
+    if (v > C[1] - 0.012 - 0.016 * fbm(u * 6, 1)) { M = 0; L = 0.02; }                                                                  // the quarry side, a long way off
+    if (gp(u, v, C, F, R) && H.z > 2.2) { M = 0; L = (abs(abs(H.z - 3.5) - 0.72) < 0.05 ? 0.9 : abs(H.z - 3.5) < 1.3 && fr(H.x * 1.5) < 0.32 ? 0.03 : 0.06 + 0.12 * hash(floor(H.x * 9), floor(H.z * 9))) * ss(40, 6, H.d); }   // metals, sleepers, ballast
+    if (rb(u, v, C, F, -40, 60, P, R, -30, 2.2) === 5) {                                                                                // the platform: flags, and its white edge
+      const w = 0.06 - H.x * 0.26, dz = abs(H.z - 0.06 + H.x * 0.1), sp = H.x < 0 ? ss(w, w * 0.45, dz) * exp(H.x * 0.3) * fl : 0, own = f === 3 && dz < w * 0.4 ? 0.2 : 1;
+      M = 0; L = H.z > 1.95 ? 0.8 * ss(40, 8, H.d) : (fr(H.x * 1.1) < 0.04 || fr(H.z * 1.1) < 0.04 ? 0.03 : 0.1 + 0.05 * hash(floor(H.x * 1.1), floor(H.z * 1.1)) + 0.6 * sp * own) * ss(40, 5, H.d);
+      A = 0.36 * sp * own * ss(-6, -0.3, H.x);                                                                                         // what comes out between the doors, lying across them
+      if (H.x > 0 && H.x < 6.6 && H.z > -1.7 && H.z < -1) L *= 0.3;
+    }
+    for (const px of [8.6, 11.1]) if ((k = rb(u, v, C, F, px, px + 0.12, -0.3, P, 1.5, 1.6))) { M = 0; A = 0; L = 0.4; }                   // the name board. it has been painted out
+    if ((k = rb(u, v, C, F, 8.2, 11.6, -0.7, 0.1, 1.48, 1.56))) { M = 0; A = 0; L = k === 3 ? (H.s < 0.02 || H.s > 0.98 || H.t < 0.07 || H.t > 0.93 ? 0.12 : 0.6 - 0.3 * fbm(H.s * 14, H.t * 2.5)) : 0.25; }
+    if ((k = rb(u, v, C, F, 0, 6, T, P, -1, 1))) {                                                                                       // the box
+      M = 0; A = 0;
+      if (k === 3) { const s = H.s, t = H.t; L = t < 0.05 || t > 0.95 || s < 0.025 || s > 0.975 ? 0.6 : (fr(s * 22) < 0.5 ? 0.3 : 0.1) * (0.6 + 0.4 * fbm(s * 9, t * 3)); if (hypot((s - 0.01) * 6, abs(t - 0.5) - 0.48) < 0.05) L = 1; L *= ss(1.6, -0.2, s); }   // its side, pressed in ribs, the corner castings
+      else if (k === 1) {
+        const z = H.z, t = H.t;
+        if (z < -0.03) L = DOOR((z + 1) / 0.97, t);
+        else { L = 0; A = fl * (0.25 + 0.75 * ss(0.3, 1, t)) * exp(-abs(z - 0.03) * 2.2); if (f === 3 && (hypot((z - 0.1) / 0.09, (t - 0.4) / 0.045) < 1 || (t > 0.44 && abs(z - 0.1) < 0.12 + 0.05 * ss(0.44, 0.52, t)))) A = 0; }   // inside
+        if (t < 0.03 || t > 0.975 || abs(z) > 0.97) L = 0.75;
+      }
+    }
+    if ((k = rb(u, v, C, G, -0.05, 0, T + 0.07, P - 0.06, -0.95, 0))) { M = 0; A = 0; L = k === 1 ? DOOR(H.s, H.t) * 0.8 : k === 3 ? 0 : 0.2; if (k === 3) A = fl * (0.3 + 0.7 * H.t); }   // the other leaf, swung out, its edge catching it
+    o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // --- signal: the halt's home signal, from the foot of its post. arm, spectacle, lamp, ladder, landing. nothing has been due for forty years. it comes off
+  S.signal = (u, v, f, o) => {
+    const C = [0.42, 0.88, 0.9], F = [0.5, 4.6, 0.6], E = 1.6, th = [0, 0.03, 0.42, 0.8][f], top = E - 5.4, pv = pj(C, F, 0, top + 0.9, -0.2), K = pv.k, x = (u - pv.u) / K, y = (v - pv.v) / K, c = cos(th), s = sin(th), ax = x * c - y * s, ay = x * s + y * c;
+    let L = 0.02 + 0.2 * ss(0.1, 0.9, v) * (0.4 + fbm(u * 2 + 3, v * 7)), A = 0, B = 0, M = 1, k;
+    if (gp(u, v, C, F, E)) { M = 0; L = (abs(abs(H.z + 2.2) - 0.72) < 0.06 ? 0.9 : abs(H.z + 2.2) < 1.3 && fr(H.x * 1.5) < 0.32 ? 0.04 : 0.08 + 0.12 * hash(floor(H.x * 8), floor(H.z * 8))) * ss(40, 5, H.d); }
+    if ((k = rb(u, v, C, F, -0.16, 0.16, top, E, -0.16, 0.16))) { M = 0; L = (k === 3 ? 0.9 : k === 1 ? 0.28 : 0.5) * (fr(H.y * 0.9) < 0.04 ? 0.5 : 1) * (H.y > E - 1.3 ? 0.25 : 1); }   // the post: pitch pine, tarred at the foot
+    if (rb(u, v, C, F, 0.3, 0.32, top + 1.6, E, -0.75, -0.35) === 1 && (H.s < 0.12 || H.s > 0.88 || fr(H.y * 3.2) < 0.14)) { M = 0; L = 0.35; }   // the ladder up to it
+    if (hypot(x, (y + 1.05) * 0.8) < 0.13 || (abs(x) < 0.035 && y > -1.5 && y < -0.9)) { M = 0; L = 0.6; }                                 // finial
+    if (ax < 0.25 && ax > -2.0 && abs(ay) < 0.17) { M = 0; L = ax < -1.45 && ax > -1.68 ? 0.04 : ay < -0.11 ? 1 : 0.86; if (ax < -1.94 || abs(ay) > 0.15) L = 0.3; }   // the arm, and the band across it
+    for (const [g, an] of [[0, 0], [1, -0.78]]) {                                                                                     // the spectacle: a red glass and a green
+      const gx = 0.62 * cos(an), gy = 0.62 * sin(an), d = hypot(ax - gx, ay - gy);
+      if (d < 0.27) { M = 0; L = d > 0.17 ? 0.14 : 0; const on = g === 0 ? f < 2 : f === 3; if (d <= 0.17) { if (g) B = on ? 1 : 0.22; else A = on ? 1 : 0.22; } }
+    }
+    if (ax > 0 && ax < 0.5 && abs(ay) < 0.1 && !A && !B && L !== 0.14) { M = 0; L = 0.14; }
+    const lr = hypot(x - 0.62, y);
+    if (f < 2) A = max(A, 0.55 * exp(-lr * 5)); else if (f === 3) B = max(B, 0.55 * exp(-lr * 5));
+    o[0] = L; o[1] = A; o[2] = B; o[3] = M;
+  };
+  // works2>>
+
+  // <<under
+  // --- shaft: inside the well, a third of the way down, looking across and down. iron rungs, and on the stones beside them hands, wet, all going the same way
+  // a hand laid flat, fingers up the page: heel, four fingers of width w, a thumb out to the right. pr = as a print: hollow in the palm, broken at the joints
+  const paw = (dx, dy, pr, w) => {
+    if (hypot(dx / 0.5, (dy - 0.38) / 0.42) < 1 && !(pr && hypot((dx - 0.04) / 0.2, (dy - 0.36) / 0.17) < 1)) return true;
+    for (let i = 0; i < 4; i++) { const fx = -0.38 + i * 0.25; if (dSeg(dx, dy, fx, 0, fx * 1.45, -[0.78, 1.02, 1.08, 0.92][i]) < w && (!pr || abs(fr(dy * 2.6 + i * 0.3) - 0.5) < 0.43)) return true; }
+    return dSeg(dx, dy, 0.42, 0.5, 0.92, 0.02) < w + 0.015;
+  };
+  S.shaft = (u, v, f, o) => {
+    const x = (u - 0.46) / 0.62, ar = Math.sqrt(max(0, 1 - x * x)), wl = 0.9 - 0.2 * ar + 0.006 * sin(u * 34 + f * 1.57) + 0.012 * (fbm(u * 9, f) - 0.5), wet = v > wl, vv = wet ? 2 * wl - v + 0.012 * sin(v * 150 + u * 22 + f * 1.57) : v;
+    const w = vv + (0.1 + 0.16 * vv) * ar, k = floor(w * 8);
+    let L = 0, A = 0, B = 0, M = 0;
+    if (abs(x) < 1) {
+      L = (0.08 + 0.85 * ss(-0.9, 0.4, x) * ss(1, 0.5, x)) * (fr(w * 8) < 0.1 || fr(Math.asin(x) * 3.2 + (k & 1) * 0.5) < 0.05 ? 0.15 : 0.75 + 0.5 * hash(k, floor(Math.asin(x) * 3.2 + (k & 1) * 0.5))) * ss(1.2, 0.35, w);   // the steining, course under course
+      if (abs(x + 0.08) < 0.13 && fr(w * 8) > 0.42 && fr(w * 8) < 0.6) { L = 1; A = 0; }                                                 // rungs
+      if (abs(x + 0.08) < 0.13 && fr(w * 8) >= 0.6 && fr(w * 8) < 0.72) { L = 0; A = 0; }
+      for (const [hx, hw, sd, tl] of [[-0.36, 0.27, 1, 0.2], [0.15, 0.41, -1, -0.15], [-0.38, 0.6, 1, 0.08], [0.14, 0.72, -1, -0.28], [-0.35, 0.88, 1, 0.3]]) {       // hands, put flat, wet and black: heel, four fingers, a thumb, and what ran down off them
+        const px = (x - hx) / 0.12, py = (w - hw) / 0.08, dx = (px * cos(tl) + py * sin(tl)) * sd, dy = py * cos(tl) - px * sin(tl);
+        const h = paw(dx, dy, 1, 0.095) || (dy > 0.7 && dy < 0.8 + 1.6 * hash(floor(dx * 5 + 9), hw) && fr(dx * 5) < 0.3 && abs(dx) < 0.45);
+        if (h && hash(floor(x * 190), floor(w * 190)) < 0.9) { L = 0; A = 0; }
+      }
+      const e = hypot((x - 0.56) / 0.2, (w - 0.5) / 0.2);
+      if (x > 0.36 && x < 0.76 && w < 0.72 && (w > 0.5 || e < 1)) { L = 0; A = hypot((x - 0.6) / 0.03, (w - 0.56) / 0.022) < 1 ? [1, 0.8, 1, 0.9][f] : 0.35 * exp(-hypot(x - 0.6, w - 0.56) * 16); }       // a way off, bricked round. there is a light some way along it
+      else if (x > 0.3 && x < 0.82 && w < 0.75 && (w > 0.5 ? 1 : e < 1.3)) { L = 0.9; A = 0; }
+    }
+    if (wet && abs(x) < 1) {                                                                                                          // the water: the wall again, upside down and broken, and the passage light lying down it
+      const d = v - wl, gx = abs(u - 0.832);
+      M = 1; L = d < 0.006 && hash(floor(u * 50), f) > 0.35 ? 0.85 : L * 0.85 * ss(0.4, 0, d); if (fr(v * 60) < 0.3) L *= 0.35;
+      if (hash(floor(v * 120), floor(u * 12 + f * 0.5)) > 0.82) L = 0.6 * ss(0.3, 0, d) * ss(1, 0.3, abs(x + 0.1));
+      A = gx < (0.01 + 0.2 * d) * (0.25 + hash(floor(v * 120), f)) ? 0.95 * ss(0.3, 0.02, d) : 0.3 * exp(-gx * 30) * ss(0.2, 0, d);
+    }
+    if (abs(u - 0.6 - 0.012 * sin(v * 5 + f * 1.57) * v) < 0.006 && !wet) { L = u < 0.6 ? 1 : 0.3; A = 0; B = 0; }                          // the rope. it is taut
+    o[0] = L; o[1] = A; o[2] = B; o[3] = M;
+  };
+
+  // a round tunnel going away: what it is cut through, where the eye is. sets T.z (how far), T.w (0 floor 1 left 2 right 3 roof), T.x / T.y (where on that face)
+  const T = { z: 0, w: 0, x: 0, y: 0 };
+  const bore = (u, v, C, hw, up, dn) => {
+    const a = (u - C[0]) / C[2], b = (v - C[1]) / C[2], zs = hw / max(abs(a), 1e-4), zf = (b > 0 ? dn : -up) / (abs(b) > 1e-4 ? b : 1e-4);
+    if (zs < zf) { T.z = zs; T.w = a < 0 ? 1 : 2; T.x = b * zs; T.y = b * zs; } else { T.z = zf; T.w = b > 0 ? 0 : 3; T.x = a * zf; T.y = 0; }
+    return T.z;
+  };
+
+  // --- adit: the level, timbered, running in under the works. tub rails. a long way in somebody has a light, and once a loop it is nearer
+  S.adit = (u, v, f, o) => {
+    const C = [0.6, 0.47, 0.75], Z = bore(u, v, C, 1, 1.15, 1), set = fr(Z * 0.55), dim = ss(15, 1.5, Z), r = hypot(u - C[0], v - C[1]);
+    let L = (0.05 + 0.5 * fbm(Z * 2.2, T.x * 2.2 + T.w * 7) ** 1.6) * dim * (1 + (f === 3 ? 0.5 : 0)), A = 0, M = 0;
+    if (T.w === 0) {
+      L = (0.1 + 0.16 * hash(floor(T.x * 14), floor(Z * 14))) * dim;
+      if (abs(T.x) < 0.75 && fr(Z * 1.3) < 0.28) L = 0.32 * dim;                                                                        // sleepers
+      if (abs(abs(T.x) - 0.42) < 0.045) L = 1 * ss(20, 3, Z);                                                                            // the rails
+      if (T.x < -0.6 && fbm(Z * 0.8, 3) > 0.55) { L = 0.02; A = abs(T.x + 0.75) < 0.06 ? 0.5 * ss(12, 3, Z) : 0; }                                                               // standing water, along the low side
+    }
+    if (set < 0.14 && T.w) { L = (T.w === 1 ? 0.25 : T.w === 2 ? 0.95 : 0.6) * (set < 0.03 ? 0.5 : 1) * ss(18, 2, Z); if (T.w !== 3 && fr(T.x * 3 + Z) < 0.08) L *= 0.5; }   // a set: two legs and a cap
+    else if (set < 0.2 && T.w) L *= 0.3;
+    const lr = f === 3 ? 0.03 : 0.012;
+    A = max(A, (r < lr ? 1 : 0.45 * exp(-r * (f === 3 ? 11 : 22))) * [1, 0.85, 1, 1][f]);
+    if (r < lr) L = 0;
+    o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // --- ledge: where the level widens. somebody has stood a lamp on the rock and gone on without it. the roof drips into the same place it has always dripped
+  S.ledge = (u, v, f, o) => {
+    const C = [0.2, 0.36, 0.7], Z = bore(u, v, C, 1.2, 1, 1.1), dim = ss(9, 1, Z), lx = 0.62, ly = 0.6, lr = hypot(u - lx, (v - ly) * 1.1), dy = fr(f / 4 + 0.001);
+    let L = (0.04 + 0.5 * fbm(Z * 2.4 + T.w * 5, T.x * 2.4)) * dim * (0.25 + 1.5 * exp(-lr * 3.5)), A = 0.45 * exp(-lr * 17), M = 0;
+    if (hypot(u - C[0], v - C[1]) < 0.05) L = 0;
+    const lg = iso(u, v, 0.34, 0.93, 0.62, -0.1, -0.2, -0.09, 0.2 + 0.03 * fbm(u * 9, 2));                                              // the ledge
+    if (lg) { const k = 0.2 + 1.3 * exp(-lr * 3.5); L = (lg === 3 ? 0.5 + 0.3 * fbm(u * 30, v * 30) : lg === 1 ? 0.14 + 0.14 * fbm(u * 14, v * 30) : 0.03) * k; }
+    if (ell(u, v, 0.585, 0.672, 0.07, 0.016) < 1 && u < lx) { L = 0; A = 0; }
+    if (inBox(u, v, lx - 0.04, ly - 0.085, lx + 0.04, ly + 0.065)) {                                                                   // a safety lamp: brass, gauze, glass
+      const y = v - ly;
+      L = y > 0.03 || y < -0.06 ? (u < lx - 0.015 ? 1 : 0.4) : 0; A = 0;
+      if (y <= 0.03 && y >= -0.02) A = abs(u - lx) < 0.012 && y > -0.012 ? 1 : 0.75; else if (y < -0.02 && y >= -0.06) L = (floor(u * 240) + floor(v * 240)) & 1 ? 0.9 : 0.1;
+      if (abs(abs(u - lx) - 0.036) < 0.005 && y < 0.03 && y > -0.06) { L = 0.9; A = 0; }
+    }
+    if (abs(ell(u, v, lx, ly - 0.11, 0.03, 0.035) - 1) < 0.22 && v < ly - 0.085) { L = 0.9; A = 0; }
+    if (abs(u - 0.37) < 0.004 && abs(v - (0.1 + dy * 0.62)) < 0.02 && dy < 0.95) { L = 0.85; A = 0.32 * ss(0, 0.6, dy); }                                         // the drip
+    const pr = hypot((u - 0.37) / 2.2, v - 0.745);
+    if (pr < 0.045 && lg === 3) { L = abs(fr(pr * 60 - f * 0.25) - 0.5) < 0.2 ? 1 : 0.02; A = L > 0.5 ? 0.25 : 0; }                                       // and the cup it has worn
+    o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // --- cart: a tub off the road, down on one side. iron-bound elm, wider at the top than the bottom. it was bringing out boots. all left ones. one of them is not empty
+  // a boot, side on: x heel to toe, y down from the ankle, both in boot lengths. lt = how lit. returns its ink, or -1
+  const boot = (x, y, lt) => {
+    const sole = 0.62 - 0.26 * ss(0.3, 1.25, x), top = x < -0.12 ? -1.5 : x < 0.7 ? -0.55 * (1 - (x + 0.12) / 0.82) ** 1.5 : 0;               // the leg, then the instep coming down to the toe
+    if (x < -1 || x > 1.25 || y < top || y > sole || (x > 0.95 && hypot((x - 0.95) / 0.3, (y - 0.2) / 0.25) > 1) || (y > sole - 0.07 && x > -0.5 && x < -0.2)) return -1;
+    if (y > sole - 0.13) return 0.02;                                                                                                // sole and heel, the waist cut up between them
+    if (y > sole - 0.18 || (x < -0.12 && y < -1.36) || x < -0.82) return 1;                                                            // welt, the top of it, the back seam
+    if (abs(x - 0.72) < 0.03 || (y < 0 ? x > -0.34 && x < -0.14 && fr(y * 5) < 0.35 : y < top + 0.16 && x < 0.4 && fr(x * 7) < 0.35)) return 0.05;   // toe cap, and the lacing
+    return (0.62 - 0.25 * x) * lt;
+  };
+  S.cart = (u, v, f, o) => {
+    const C = [0.52, 0.26, 1.0], F = [0.3, 4.2, 0.62], E = 1.5, lt = 0.35 + 0.85 * ss(1.1, -0.1, u * 0.7 + (1 - v) * 0.5), pv = pj(C, F, 0.6, E, -0.4), ca = cos(-0.085), sa = sin(-0.085), ru = pv.u + (u - pv.u) * ca + (v - pv.v) * sa, rv = pv.v - (u - pv.u) * sa + (v - pv.v) * ca;
+    let L = (0.02 + 0.5 * fbm(u * 5, v * 9) ** 1.6 + (abs(fr(v * 14 + 2 * fbm(u * 3, 1)) - 0.5) < 0.05 ? 0.12 : 0)) * ss(-0.1, 0.25, v) * lt, A = 0, M = 0, k;
+    if (gp(u, v, C, F, E)) {                                                                                                           // the floor, and the road it came off
+      const z = H.z - 0.75, dim = ss(9, 2, H.d) * lt;
+      L = (0.05 + 0.4 * hash(floor(H.x * 16), floor(H.z * 16)) ** 2) * dim;
+      if (abs(z) < 0.72 && fr(H.x * 1.05) < 0.24) L = 0.34 * dim;
+      if (abs(abs(z) - 0.42) < 0.035) L = ss(9, 2.5, H.d);
+      if (hypot((H.x - 0.25) / 1.35, (H.z + 0.15) / 0.75) < 1) L *= 0.1;                                                                 // its shadow
+    }
+    if ((k = rb(ru, rv, C, F, -0.8, 0.8, E - 0.52, E - 0.36, -0.4, 0.4))) L = k === 3 ? (fr(H.s * 8) < 0.12 ? 0.2 : 0.8) : 0.15;                                     // the frame under it
+    for (const wx of [-0.48, 0.48]) if (rb(ru, rv, C, F, wx - 0.28, wx + 0.28, E - 0.56, E, -0.46, -0.42) === 3) {                        // wheels: cast, flanged, four holes
+      const d = hypot(H.x - wx, H.y - E + 0.28) / 0.28, an = Math.atan2(H.y - E + 0.28, H.x - wx);
+      if (d < 1) L = d > 0.84 ? 1 : d > 0.74 ? 0.25 : d < 0.2 ? (d < 0.09 ? 0.1 : 0.9) : d > 0.36 && d < 0.62 && abs(fr((an * 2) / PI) - 0.5) < 0.28 ? 0.02 : 0.5;
+    }
+    for (let j = 0; j < 5; j++) {                                                                                                       // the body, a plank to a course
+      const hl = 0.7 + 0.045 * j, hw = 0.4 + 0.035 * j;
+      if (!(k = rb(ru, rv, C, F, -hl, hl, E - 0.72 - j * 0.2, E - 0.52 - j * 0.2, -hw, hw))) continue;
+      const s = H.s, t = H.t;
+      if (k === 3) {
+        L = (t > 0.9 ? 0.08 : 0.6 + 0.28 * fbm(s * 5 + j * 7, t * 2)) * lt;
+        if (abs(abs(s - 0.5) - 0.3) < 0.03 || s < 0.035 || s > 0.965 || (j === 4 && t < 0.3)) L = hypot((fr(s * 12) - 0.5) / 4, t - 0.55) < 0.1 && !(j === 4 && t < 0.3) ? 0.15 : 1;   // straps, corner irons, the rim, a rivet to each plank
+      } else if (k === 1) {
+        L = t > 0.9 ? 0.04 : 0.2 + 0.08 * fbm(s * 5 + j * 7, t * 2);
+        if (abs(abs(s - 0.5) - 0.28) < 0.04 || s > 0.95 || (j === 4 && t < 0.3)) L = 0.5;
+        if (j < 2 && abs(s - 0.5) < 0.1) L = 0.7;                                                                                      // the drawplate
+      } else if (k === 5 && j === 4) L = s < 0.03 || s > 0.97 || t < 0.06 || t > 0.94 ? 1 : hash(floor(s * 13), floor(t * 7)) > 0.6 && s < 0.8 ? 0.22 : 0.01;   // down into it: not quite empty
+    }
+    const h0 = pj(C, F, -0.72, E - 0.56, 0), h1 = pj(C, F, -1.12, E - 0.2, 0);                                                          // drawbar and hook
+    if (dSeg(ru, rv, h0.u, h0.v, h1.u, h1.v) < 0.007 || abs(hypot(ru - h1.u + 0.01, rv - h1.v - 0.018) - 0.02) < 0.006) L = 0.85;
+    for (const [bx, by, sz, tl, hit] of [[0.34, 0.9, 1.25, 0.2, 0], [0.15, 0.82, 1.0, -0.3, 1], [0.1, 0.6, 0.72, 0.5, 0], [0.26, 0.5, 0.6, 0, 0], [0.07, 0.45, 0.52, -0.4, 0], [0.9, 0.95, 1.15, 0.4, 0]]) {
+      const c = cos(tl), sn = sin(tl), x = ((u - bx) * c + (v - by) * sn) / (0.06 * sz), y = (-(u - bx) * sn + (v - by) * c) / (0.06 * sz), b = boot(x, y, lt);
+      if (b >= 0) { L = b; if (hit && x < -0.12 && y < -1.2) { L = 0; A = 1; } }
+    }
+    o[0] = min(L, 1); o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // --- junction: three ways on. somebody has chalked a sign over each. one of them is lit from inside
+  S.junction = (u, v, f, o) => {
+    let L = 0.03, A = 0, M = 0;
+    if (wall(u, v, -0.05, 1.05, -0.3, 0.14, 1.12, 0.74)) {
+      const q = deep(W.s, 1.42, 0.6), t = W.t;
+      L = (0.04 + 0.75 * fbm(q * 9, t * 7) ** 1.5 + (abs(fr(t * 9 + 0.6 * fbm(q * 4, 2)) - 0.5) < 0.04 ? 0.25 : 0)) * (1 - 0.55 * q) * (t > 0.44 && t < 0.5 ? 1.4 : 1);
+      for (let k = 0; k < 3; k++) {
+        const cx = 0.18 + k * 0.31, hx = (q - cx) / 0.1, e = t < 0.62 ? hypot(hx, (t - 0.62) / 0.16) : abs(hx);
+        if (e < 1 && t > 0.44) { L = k === 1 ? 0 : abs(abs(hx) - 0.5) < 0.06 && t > 0.8 ? 0.3 : 0; A = k === 1 ? [0.85, 0.7, 0.85, 0.4][f] * ss(0.75, 0.1, e) * ss(0.95, 0.6, t) : 0; if (k === 1 && f === 3 && hypot(hx * 1.6, (t - 0.7) / 0.05) < 1) A = 0; if (k === 1 && f === 3 && abs(hx) < 0.28 && t > 0.74) A = 0; }
+        else if (e < 1.22 && t > 0.42) { L = fr(Math.atan2(t - 0.62, hx * 0.1) * 3) < 0.14 ? 0.2 : 0.85 - 0.3 * q; A = 0; }                // stone round each mouth
+        if (sigil((q - cx) / 0.075, (t - 0.3) / 0.085, k, 0.3)) { L = 1; A = 0; }
+      }
+    } else {
+      const Z = 0.25 / max(v - 0.55, 1e-3), X = (u - 1.3) * Z;
+      L = (0.05 + 0.3 * hash(floor(X * 12), floor(Z * 12))) * ss(5, 0.5, Z); if (fbm(X * 1.4, Z * 1.4) > 0.62) L = 0.01;
+      for (const off of [-0.5, 0.1]) if (abs(X * 0.5 + Z * 0.6 + off - 1.2) < 0.03) L = 1;                                              // the road, coming up to the points
+    }
+    o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // --- cavern: the level breaks into something that was already here. water, dead still. steps cut down to it. across it, a light, and its twin
+  S.cavern = (u, v, f, o) => {
+    const wl = 0.6, mir = v > wl, y = mir ? 2 * wl - v + 0.004 * sin(u * 60 + v * 90 + f * 1.57) : v, far = 0.36 + 0.1 * fbm(u * 3, 5), lr = hypot(u - 0.66, (y - 0.52) * 1.2);
+    let L = 0.02, A = 0, B = 0, M = 1;
+    if (y > far - 0.2) L = (0.06 + 0.95 * fbm(u * 7, y * 12) ** 1.7) * ss(0.64, 0.3, y) * ss(far - 0.2, far + 0.05, y) * (0.4 + 1.2 * exp(-abs(u - 0.66) * 4));                               // the far wall, its foot in the water
+    for (let k = 0; k < 3; k++) {                                                                                                     // what hangs from the roof, three deep
+      const n = 7 + k * 5, c = floor(u * n + k * 0.4), tip = (0.2 + 0.36 * hash(c, k)) * (1.25 - 0.3 * k) * (0.8 + 0.5 * abs(u - 0.5)), x = abs(fr(u * n + k * 0.4) - 0.5);
+      if (y < tip && x < 0.4 * (1 - y / tip) + 0.02) { M = 0; L = [0.3, 0.12, 0.01][k] * (fr(u * n + k * 0.4) < 0.5 - 0.2 * (1 - y / tip) ? 2.8 : 0.3); }
+    }
+    if (lr < 0.014) { L = 0; A = 1; M = 0; } else A = 0.5 * exp(-lr * 20) * [1, 0.9, 1, 0.8][f];
+    if (mir) { L *= 0.45; A = abs(u - 0.66) < (0.012 + 0.16 * (v - wl)) * (0.3 + hash(floor(v * 120), f)) && v < wl + 0.3 ? 0.95 * ss(wl + 0.3, wl + 0.05, v) : 0; if (fr(v * 60) < 0.3) L *= 0.4; if (abs(v - wl) < 0.004) L = 0.9; }
+    for (let k = 0; k < 5; k++) { const st = iso(u, v, 0.02 + k * 0.035, 1.12 - k * 0.075, 0.36, -0.09, -0.2, -0.07, 0.075); if (st) { M = 0; A *= 0.3; L = st === 3 ? 0.85 - 0.12 * k : st === 1 ? 0.3 - 0.04 * k : 0.06; if (k === 4 && st !== 3 && v > wl + 0.085) L = 0.02; } }   // the steps. the last one is under
+    const rp = hypot((u - 0.5) / 3.2, v - 0.8); if (rp < 0.034 && rp > 0.004 && abs(fr(rp * 70 - f * 0.25) - 0.5) < 0.17) { L = 1; A = 0; M = 0; }   // something has just gone in off them
+    o[0] = L; o[1] = A; o[2] = B; o[3] = M;
+  };
+
+  // --- tally: the wall by the water. somebody has been keeping count in fives, right the way back. the last gate wants one stroke, and once a loop it gets it
+  S.tally = (u, v, f, o) => {
+    let L = 0.03, A = 0, M = 0;
+    if (wall(u, v, -0.05, 1.05, -0.3, 0.18, 1.3, 0.8)) {
+      const q = deep(W.s, 1.6, 0.62), t = W.t, i = floor(q * 11), j = floor(t * 8), x = fr(q * 11), y = fr(t * 8), jx = x + 0.06 * (hash(i, j) - 0.5), last = i === 2 && j === 5, n = last ? 4 : 5;
+      L = (0.03 + 0.3 * fbm(q * 8, t * 7) ** 1.4) * (0.35 + 1.1 * exp(-hypot(q - 0.25, t - 0.7) * 2.2));
+      if (!(j === 5 && i < 2) && !(j > 5 && i < 4) && j < 8 && y > 0.16 && y < 0.84 && (last || hash(i * 3, j * 5) > 0.06)) {
+        const st = fr(jx * 6.2 - 0.6), sk = floor(jx * 6.2 - 0.6);
+        if ((st < 0.3 && sk >= 0 && sk < 4 && (last || hash(floor(y * 9), i + j * 13 + sk) > 0.14)) || (n === 5 && abs(y - 0.2 - (jx - 0.05) * 0.75) < 0.05 && jx > 0.05 && jx < 0.85) || (last && f === 3 && abs(y - 0.2 - (jx - 0.05) * 0.75) < 0.05 && jx > 0.05 && jx < 0.85)) { L = last ? 0 : (1 - 0.6 * q) * (0.45 + 0.8 * exp(-hypot(q - 0.25, t - 0.7) * 2)); A = last ? 1 : 0; }
+      }
+    } else { const Z = 0.25 / max(v - 0.6, 1e-3); L = (0.04 + 0.2 * fbm(u * Z * 4, Z * 4)) * ss(4, 0.4, Z); }
+    const ch = iso(u, v, 0.3, 0.955, 0.09, -0.02, -0.02, -0.012, 0.014);                                                              // the chalk, where it was put down
+    if (ch) { L = 0; A = ch === 3 ? 1 : 0.5; }
+    o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
+  };
+  // under>>
+
+  // <<house1
+  // --- basement: under Dunn's, from the foot of the stair. one bulb on its flex. the stair goes up the wall to the shop door, and the door is being held to
+  S.basement = (u, v, f, o) => {
+    const C = [0.56, 0.46, 0.8], F = [-1.22, 1.15, -0.45], E = 1.5, TOP = -2.8, lp = [0.4, -1.5, 3.4], fl = [1, 0.92, 1, 0.7][f], bl = pj(C, F, lp[0], lp[1], lp[2]), br = hypot(u - bl.u, v - bl.v);
+    let L = 0.02, A = 0, M = 0, k;
+    const lg = (r) => fl * lamp(lp[0], lp[1], lp[2], r || 6);
+    if ((k = rb(u, v, C, F, -3, 3, TOP, E, -2, 7, 1))) {
+      const l = 0.1 + 1.4 * lg();
+      if (k === 6) L = (fr(H.x * 0.9) < 0.035 || fr(H.z * 0.9) < 0.035 ? 0.04 : 0.34 + 0.12 * hash(floor(H.x * 0.9), floor(H.z * 0.9))) * l;   // flags
+      else if (k === 5) L = (fr(H.z * 1.4) < 0.16 ? 0.5 : 0.05) * l;                                                                    // joists, and the shop floor on them
+      else if (k === 4) {                                                                                                             // the far wall, and the arch somebody bricked up
+        const ar = H.y < -0.1 ? hypot(H.x - 1.2, H.y + 0.1) : abs(H.x - 1.2);
+        L = 0.4 * brick(H.x * 0.4, H.y * 0.4, 6) * l;
+        if (ar < 0.95) { L = (ar > 0.8 ? 0.7 : 0.3 * brick(H.x * 0.9 + 0.3, H.y * 0.9, 6)) * l; if (ar <= 0.8 && hash(floor(H.x * 3.6), floor(H.y * 5.4)) > 0.86) L = 0; }
+        if (H.x > -2.9 && H.x < -1.95 && H.y > -2.7 && H.y < -0.6) { L = H.x > -2.02 ? 0 : 0.12 * l + (abs(H.x + 2.42) < 0.02 || abs(H.y + 1.6) < 0.03 ? 0.1 : 0); if (H.x > -2.02) A = [0.9, 0.9, 0.9, 0][f]; if (H.x < -2.84 || H.y < -2.64) L = 0.5 * l; }   // the door at the top, and the shop's light down one edge of it
+      } else L = (k === 2 ? 0.34 : 0.3) * brick(H.z * 0.4, H.y * 0.4, 6) * l;
+    }
+    if ((k = rb(u, v, C, F, -3, -1.9, -0.6, E, 4.35, 7))) { const l = 0.1 + lg(); L = (k === 5 ? 0.6 : k === 2 ? 0.3 * brick(H.s * 1.2, H.t, 6) : 0.16) * l; }   // the half-landing
+    for (let i = 6; i >= 0; i--) if ((k = rb(u, v, C, F, -3, -1.9, E - (i + 1) * 0.3, E, 1.2 + i * 0.45, 1.65 + i * 0.45))) { const l = 0.1 + lg(); L = (k === 5 ? 0.8 : k === 3 ? (H.t < 0.1 ? 0.9 : 0.36) : 0.14) * l; }   // the stair, up the left-hand wall
+    if ((k = rb(u, v, C, F, -1.92, -1.8, E - 1.2, E, 1.15, 1.27))) L = (k === 3 ? 0.8 : 0.3) * (0.1 + lg());                                 // newel
+    if (rb(u, v, C, F, -1.88, -1.84, -1.6, E - 1.1, 1.2, 4.4) === 2 && abs(H.t - 0.02 - (1 - H.s) * 0.84) < 0.035) L = 0.7 * (0.1 + lg());   // and the rail
+    for (const [x0, x1, z0, z1, h] of [[0.4, 1.5, 4.8, 5.9, 0.95], [0.1, 1.1, 3.6, 4.5, 0.8], [0.6, 1.3, 5, 5.7, 1.65]]) if ((k = rb(u, v, C, F, x0, x1, E - h, h > 1 ? E - 0.95 : E, z0, z1))) { const l = 0.1 + lg(); L = (k === 5 ? 0.85 : k === 1 ? (H.s < 0.06 || H.s > 0.94 || H.t < 0.08 || H.t > 0.92 ? 0.95 : 0.5 + 0.1 * fbm(H.s * 3, H.t * 30)) : (H.s < 0.06 || H.s > 0.94 || H.t < 0.08 ? 0.5 : 0.2)) * l; }   // tea chests
+    if (abs(u - bl.u) < 0.003 && v < bl.v) L = 0.5;
+    if (br < 0.02) { L = 0; A = fl; } else A = max(A, 0.6 * fl * exp(-br * 24));
+    o[0] = min(L, 1); o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // --- spares: the racking at the back. heads on the top shelf, turned to the wall. arms and legs stood on end under them. a box of hands. once a loop one head is not turned
+  S.spares = (u, v, f, o) => {
+    const C = [0.42, 0.6, 1.0], F = [-0.5, 3.1, 0.5], E = 1.6, lp = [-1.0, -1.3, -1.6];
+    let L = 0.02, A = 0, M = 0, k;
+    const lg = (r) => lamp(lp[0], lp[1], lp[2], r || 5);
+    if (gp(u, v, C, F, E) && H.z < 0) L = (fr(H.x * 1.2) < 0.05 || fr(H.z * 1.2) < 0.05 ? 0.03 : 0.2) * (0.1 + lg()) * ss(8, 1.5, H.d);
+    if (rb(u, v, C, F, -9, 9, -5, E, 0, 1) === 3) L = 0.22 * brick(H.x * 0.4, H.y * 0.4, 6) * (0.1 + lg());
+    if (rb(u, v, C, F, -2.6, 2.6, -1.9, E, -0.3, -0.29) === 3) {                                                                         // what stands on the shelves
+      const x = H.x, y = H.y, l = 0.25 + 1.5 * lg(), j = y < -0.75 ? 0 : y < 0.45 ? 1 : 2, sy = j === 0 ? (y + 1.9) / 1.15 : j === 1 ? (y + 0.75) / 1.2 : (y - 0.45) / 1.15;
+      if (j === 0) {                                                                                                                  // heads, on their stumps
+        const i = floor(x / 0.72 + 4), cx = fr(x / 0.72) - 0.5, turned = i === 5 && f === 3, d = hypot(cx / 0.3, (sy - 0.52) / 0.33), sh = cl(0.5 - cx / 0.6 - (sy - 0.5) * 0.5);
+        if (d < 1) { L = (0.1 + 0.9 * sh * sh) * l; if (!turned && cx > 0.2 && abs(sy - 0.55) < 0.07) L = (cx > 0.25 ? 0.3 : 0.9) * l; if (turned && (hypot((abs(cx + 0.03) - 0.11) / 0.055, (sy - 0.47) / 0.04) < 1 || (abs(cx + 0.03) < 0.09 && abs(sy - 0.68) < 0.014) || (abs(cx + 0.03) < 0.015 && sy > 0.5 && sy < 0.6))) L = 0; }
+        else if (abs(cx) < 0.13 - 0.04 * (sy - 0.8) && sy > 0.78) L = (cx < -0.04 ? 0.8 : 0.25) * l;
+      } else if (j === 1) {                                                                                                           // arms and legs
+        const i = floor(x / 0.42 + 7), cx = fr(x / 0.42) - 0.5, leg = i % 3 === 1, w = leg ? 0.26 - 0.13 * sy + 0.06 * sin(sy * 6.5) : 0.15 - 0.05 * sy, bend = 0.1 * sin(i * 2.3) * (sy - 0.5), xx = cx - bend, sh = cl(0.5 - xx / w / 2);
+        if (abs(xx) < w && sy > 0.1 && sy < 0.97) { L = (0.08 + 0.92 * sh * sh) * l; if (abs(sy - (leg ? 0.55 : 0.5)) < 0.012) L = 0.03; }
+        if (!leg && sy <= 0.12 && sy > 0 && abs(xx) < 0.2 && fr(xx * 8 + 0.5) < 0.62 && sy > 0.02 + 0.06 * abs(xx * 4)) L = (xx < 0 ? 0.9 : 0.5) * l;   // fingers
+        if (leg && sy <= 0.12 && sy > 0.02 && xx > -0.2 && xx < 0.34) L = 0.6 * l;                                                       // a foot, sole up
+      } else if (x < 0.4 && x > -1.8) {                                                                                               // a box of hands
+        const cx = fr(x / 0.24);
+        if (sy > 0.5 && sy < 0.97) L = (sy < 0.55 ? 1 : fr(x * 3) < 0.05 ? 0.15 : 0.45) * l;
+        else if (sy > 0.2 + 0.2 * hash(floor(x / 0.24), 2) && sy <= 0.5 && cx < 0.75) L = (fr(cx * 5.4) < 0.72 ? (cx < 0.3 ? 0.95 : 0.6) : 0.05) * l;
+      }
+    }
+    for (const sy of [-0.75, 0.45, E - 0.02]) if ((k = rb(u, v, C, F, -2.7, 2.7, sy, sy + 0.07, -0.55, 0))) L = (k === 5 ? 0.6 : k === 3 ? 1 : 0.3) * (0.15 + 1.2 * lg());   // the shelves themselves
+    for (const ux of [-2.7, -0.9, 0.9, 2.62]) if ((k = rb(u, v, C, F, ux, ux + 0.08, -2.1, E, -0.57, -0.49))) L = (k === 3 ? 0.75 : 0.25) * (0.15 + 1.2 * lg());   // uprights
+    const bl = pj(C, F, lp[0], lp[1], lp[2]), br = hypot(u - bl.u, v - bl.v);
+    if (abs(u - bl.u) < 0.003 && v < bl.v) L = 0.4;
+    if (br < 0.02) { L = 0; A = 1; } else A = 0.55 * exp(-br * 24);
+    o[0] = min(L, 1); o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // --- boiler: the furnace under the shop. the shop has been shut since the war. it is alight, and somebody has just fed it
+  S.boiler = (u, v, f, o) => {
+    const fl = [1, 0.75, 0.95, 0.6][f], cx = 0.55, x = (u - cx) / 0.24, gl = fl * exp(-hypot(u - 0.5, (v - 0.8) * 1.4) * 4.2);
+    let L = 0.04, A = 0.5 * gl * gl, M = 0;
+    if (wall(u, v, -0.05, 1.05, -0.2, 0.05, 0.9, 0.7)) L = (0.1 + 0.5 * gl) * brick(deep(W.s, 1.1, 0.65) * 2.5, W.t, 14);
+    else { const Z = 0.25 / max(v - 0.62, 1e-3), X = (u - 1.2) * Z; L = (fr(X) < 0.05 || fr(Z) < 0.05 ? 0.03 : 0.1 + 0.5 * gl) * ss(4, 0.4, Z); A = 0.8 * gl * gl; }
+    for (const [px, w] of [[0.5, 0.02], [0.63, 0.014]]) if (abs(u - px) < w && v < 0.2) { L = u < px ? 0.9 : 0.3; A = 0; }                // flues, up through the shop floor
+    if (dSeg(u, v, 0.63, 0.1, 1.05, 0.02) < 0.014) { L = v < 0.1 - (u - 0.63) * 0.19 ? 0.9 : 0.3; A = 0; }
+    if (abs(x) < 1 && v > 0.16 - 0.05 * Math.sqrt(1 - x * x) && v < 0.9 + 0.06 * Math.sqrt(1 - x * x)) {                                 // the shell, riveted in bands
+      const band = fr((v + 0.05 * Math.sqrt(1 - x * x)) * 5.5);
+      A = 0; L = 0.04 + 0.95 * ss(0.2, -0.85, x) ** 1.5 + 0.5 * ss(0.6, 1, x) * gl;
+      if (band < 0.1) L *= fr(Math.asin(x) * 9) < 0.3 ? 1.5 : 0.5;
+      const d = hypot((x + 0.25) / 0.3, (v - 0.4) / 0.065), fd = hypot((x + 0.1) / 0.42, (v - 0.74) / 0.085);
+      if (d < 1) { L = d > 0.78 ? 1 : 0.85; if (d <= 0.78 && abs(Math.atan2(v - 0.4, x + 0.25) + 0.7 + 0.1 * sin(f * 1.57)) < 0.12 / max(d, 0.15)) L = 0; }   // the gauge. it is in the red
+      if (fd < 1.2) { L = fd > 1 ? 1 : 0; if (fd <= 1) A = fl * (0.6 + 0.4 * fbm(u * 30, v * 30 - f * 0.9)); }                                  // the fire door, open
+    }
+    if (quad(u, v, 0.26, 0.6, 0.345, 0.64, 0.345, 0.82, 0.26, 0.78)) { L = u < 0.275 ? 1 : 0.3; A = 0.5 * gl; }                           // and the door itself, swung back
+    const hp = v - 0.92 + 0.6 * abs(u - 0.13) - 0.03 * fbm(u * 30, 1);
+    if (hp > 0) { L = hash(floor(u * 70), floor(v * 70)) > 0.75 ? 0.6 : 0.02; A = hash(floor(u * 70 + 3), floor(v * 70)) > 0.85 ? gl : 0; }  // coal
+    if (dSeg(u, v, 0.22, 0.95, 0.36, 0.36) < 0.007) { L = 1; A = 0; }                                                                    // the shovel, stood in it
+    if (quad(u, v, 0.19, 0.93, 0.25, 0.97, 0.265, 0.86, 0.215, 0.83)) { L = 0.6; A = 0; }
+    o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // --- chute: the coal hole, from the bottom. a square of street up there, and the marks of whatever came down it last. once a loop something is looking in
+  S.chute = (u, v, f, o) => {
+    const C = [0.36, 0.26, 0.7], Z = bore(u, v, C, 1, 0.8, 1), end = Z > 6.5, dim = ss(8, 1, Z);
+    let L = 0, A = 0, B = 0, M = 0;
+    if (end) { M = 1; B = 0.95; if (fr((u - C[0]) * 26) < 0.14) { B = 0; L = 0.1; } const e0 = C[0] - 0.108, d = f === 5 ? 0.052 : 0.016, hy = C[1] + 0.005; if (f > 3 && (ell(u, v, e0 + d - 0.014 + (hy - v) * 0.12, hy, 0.04, 0.046) < 1 || (v > hy + 0.03 && u < e0 + d * 0.8 - 0.012 + (v - hy - 0.03) * 0.25) || (f === 5 && v > hy - 0.085 && v < hy - 0.05 && u < e0 + 0.016 && fr(v * 120) > 0.28))) { B = 0; L = 0; M = 0; } }   // the grating. a head, round the edge of it, and the fingers it holds on by
+    else if (T.w === 0) { L = (0.3 + 0.3 * fbm(T.x * 3, Z * 1.5)) * dim; if (abs(fr(T.x * 2.4 + 0.25 * sin(Z * 2)) - 0.5) < 0.1 && Z > 1.6) L = 0.03; B = 0.5 * ss(3, 6.5, Z) * ss(0.7, 0, abs(T.x)); }   // the slide, and what was dragged down it, or up
+    else { L = (T.w === 2 ? 0.5 : T.w === 3 ? 0.1 : 0.2) * brick(Z * 0.5, T.x * 0.5, 5) * dim; B = T.w === 2 ? 0.3 * ss(2, 6.5, Z) : 0; }
+    const hp = v - 0.8 + 0.3 * abs(u - 0.6) - 0.05 * fbm(u * 20, 2);
+    if (hp > 0) { B = 0; L = hash(floor(u * 60), floor(v * 60)) > 0.7 ? 0.7 : 0.02; }                                                     // what is left of the last load
+    o[0] = L; o[1] = A; o[2] = B; o[3] = M;
+  };
+
+  // --- attic: under the roof, from the hatch. rafters going away to the gable, the moon through the round light, and where it falls the dust has been walked in
+  S.attic = (u, v, f, o) => {
+    const C = [0.36, 0.52, 0.8], a = (u - C[0]) / C[2], b = (v - C[1]) / C[2], up = 1.25, m = 1.15, zf = b > 0 ? 0.8 / b : 99, zr = (up * m) / max(a - b * m, 1e-4), zl = (up * m) / max(-a - b * m, 1e-4), Z = min(zf, zr, zl, 7), X = a * Z, wy = C[1] - 0.075, wd = hypot(u - C[0], (v - wy) * 1.05), dp = drape(u, v, f, 26, 0.09);
+    let L = 0.04, A = 0, M = 0;
+    if (Z === 7) {                                                                                                                    // the gable end
+      L = 0.22 * brick(X * 0.4, b * 2.8, 6); if (wd < 0.06) { M = 1; L = abs(u - C[0]) < 0.005 || abs(v - wy) < 0.005 || wd > 0.05 ? 0.1 : 1; }
+    } else if (Z === zf) {
+      const pool = ell(X, Z, 0.3, 3.4, 0.6, 1.5);
+      L = (fr(X * 2.2) < 0.08 ? 0.03 : 0.16) * ss(8, 1, Z);                                                                              // boards
+      if (pool < 1) { L = abs(X - 0.3) < 0.04 || abs(Z - 3.4) < 0.12 ? 0.3 : 1; for (let k = 0; k < 5; k++) if (ell(X, Z, 0.3 + (k & 1 ? 0.16 : -0.16), 2.3 + k * 0.42, 0.075, 0.17) < 1) L = 0.1; }   // the moon on them, and where somebody has been walking up and down in it
+    } else { const rz = fr(Z * 1.1); L = (rz < 0.16 ? (Z === zr ? 1 : 0.36) * (rz < 0.04 ? 0.4 : 1) : Z === zr ? 0.12 : 0.03) * ss(8.5, 1.5, Z); }   // rafters, and the slates' backs between
+    const ch = pb(u, v, C, -1.0, -0.35, -1.3, 0.8, 4.2, 5);                                                                           // the stack, coming up through
+    if (ch) L = (ch === 1 ? 0.16 : 0.6) * brick(W.s, W.t * 2.4, 5);
+    const bx = pb(u, v, C, 0.75, 1.5, 0.3, 0.8, 2.6, 3.4);
+    if (bx) L = bx === 3 ? 0.75 : bx === 1 ? (W.t < 0.08 ? 0.9 : 0.14) : 0.4;
+    if (dp >= 0 && v < 0.18) L = dp * 2;                                                                                               // web
+    if (abs(u - 0.5 - 0.004 * sin(f * 1.57)) < 0.003 && v < 0.33) L = 0.8;
+    L *= ss(0.78, 0.28, hypot(u - 0.42, (v - 0.55) * 1.1));
+    if (hypot(u - 0.5 - 0.005 * sin(f * 1.57), (v - 0.345) * 0.8) < 0.014) { L = 0; A = 1; }                                               // the light pull, with a red bead on it. moving
+    o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // --- trunk: a dome-top trunk with the lid thrown back. slats, straps, brass corners, a paper lining. a child's things, folded. on top a red coat, and it is wet
+  S.trunk = (u, v, f, o) => {
+    const C = [0.5, 0.26, 1.0], F = [0.25, 3.0, 0.55], E = 1.9, T = E - 0.78, lg = () => lamp(-1.6, -0.6, -1.2, 4);
+    let L = 0.02, A = 0, M = 0, k;
+    if (gp(u, v, C, F, E)) { L = (fr(H.z * 2 + H.x * 0.1) < 0.06 ? 0.03 : 0.2 + 0.06 * fbm(H.x * 30, H.z * 3)) * (0.08 + 1.1 * lg()) * ss(9, 2, H.d); if (H.x > -0.7 && H.x < 1.9 && H.z > -0.1 && H.z < 1.5) L *= 0.15; }   // boards, and the shadow it stands in
+    if ((k = rb(u, v, C, F, -0.85, 0.85, T - 1.0, T, 0.92, 1.1))) {                                                                     // the lid, stood up: its inside, papered, with a likeness pinned to it
+      const s = H.s, t = H.t, l = 0.2 + 1.1 * lg();
+      if (k === 3) { L = (s < 0.04 || s > 0.96 || t < 0.05 || t > 0.97 ? 0.9 : (floor(s * 14 + t * 8) + floor(s * 14 - t * 8)) & 1 ? 0.5 : 0.34) * l; if (abs(abs(s - 0.5) - 0.25) < 0.02 && t > 0.05) L = 0.15 * l; if (abs(s - 0.5) < 0.13 && abs(t - 0.45) < 0.2) L = (abs(s - 0.5) > 0.11 || abs(t - 0.45) > 0.17 ? 0.15 : hypot((s - 0.5) / 0.05, (t - 0.42) / 0.09) < 1 ? 0.2 : 0.85) * l; }
+      else L = (k === 5 ? 0.8 : 0.22) * l;
+    }
+    if ((k = rb(u, v, C, F, -0.85, 0.85, T, E, 0, 0.95))) {
+      const s = H.s, t = H.t, l = 0.2 + 1.1 * lg(), cn = (s < 0.08 || s > 0.92) && (t < 0.16 || t > 0.84);
+      if (k === 3) {                                                                                                                  // the front: canvas, slats, a hasp and two catches
+        L = (0.2 + 0.07 * fbm(s * 60, t * 40)) * l;
+        if (abs(t - 0.3) < 0.055 || abs(t - 0.78) < 0.055 || abs(s - 0.045) < 0.045 || abs(s - 0.955) < 0.045) L = (fr(s * 40 + t * 3) < 0.15 ? 0.4 : 0.66) * l;
+        if (t < 0.06) L = 0.9 * l;
+        if (cn || (abs(s - 0.5) < 0.05 && t < 0.3) || (abs(abs(s - 0.5) - 0.3) < 0.03 && t < 0.2)) L = l;                                   // brass
+        if (hypot((s - 0.5) * 2, t - 0.2) < 0.03 || (abs(s - 0.5) < 0.008 && t > 0.2 && t < 0.27)) L = 0;
+        if ((abs(t - 0.3) < 0.055 || abs(t - 0.78) < 0.055) && fr(s * 9) < 0.06) L = 0.05;
+      } else if (k === 1) {                                                                                                           // the end, and its leather handle
+        L = (0.09 + 0.04 * fbm(s * 60, t * 40)) * l; if (abs(t - 0.3) < 0.055 || abs(t - 0.78) < 0.055 || s < 0.06 || s > 0.94) L = 0.28 * l; if (cn) L = 0.5 * l;
+        if (abs(hypot((s - 0.5) / 0.22, (t - 0.42) / 0.13) - 1) < 0.2 && t > 0.42) L = 0.45 * l;
+      } else if (k === 5) {                                                                                                           // looking in
+        L = s < 0.035 || s > 0.965 || t < 0.06 || t > 0.94 ? 0.95 * l : 0.02;
+        if (s > 0.07 && s < 0.93 && t > 0.12 && t < 0.9) {
+          L = (s < 0.42 ? (fr(t * 5) < 0.12 ? 0.25 : 0.85 - 0.3 * fr(t * 5)) : 0.5) * l;                                                 // linen, in a pile
+          if (s > 0.44) { const fold = fr(s * 5 + t * 1.5); L = fold < 0.1 ? 0.25 : 0; A = L ? 0 : 0.55 + 0.45 * fbm(s * 9, t * 9) + (hash(floor(s * 50), floor(t * 30) + f) > 0.93 ? 0.5 : 0); if (hypot((s - 0.62) * 1.8, t - 0.3) < 0.025 || hypot((s - 0.62) * 1.8, t - 0.55) < 0.025) { L = 1; A = 0; } }   // the coat: its buttons, its wet
+        }
+      }
+    }
+    o[0] = min(L, 1); o[1] = min(A, 1); o[2] = 0; o[3] = M;
+  };
+  // house1>>
+
+  // <<house2
+  // --- form: a dressmaker's form in the dormer, under a sheet. it has no head. the shadow it throws on the slope of the roof has
+  S.form = (u, v, f, o) => {
+    const cx = 0.4, y = v - 0.2, x = u - cx, hw = y < 0 ? 0 : 0.11 * ss(0, 0.07, y) + 0.035 * ss(0.05, 0.2, y) - 0.04 * ss(0.16, 0.32, y) + 0.1 * ss(0.3, 0.62, y) + 0.012 * sin(y * 40) * ss(0.3, 0.6, y);
+    let L = 0.05, A = 0, M = 0;
+    if (wall(u, v, 0.3, 1.05, -0.4, 0.3, 0.74, 0.62)) {                                                                                // the slope of the roof, lathed, the plaster gone in places
+      const q = deep(W.s, 1.14, 0.32), t = W.t, sx = (q - 0.5) / 0.17, sy = t - 0.3 - 0.1 * q;
+      L = (fbm(q * 7, t * 5) > 0.56 ? (fr(t * 30) < 0.5 ? 0.5 : 0.08) : 0.62) * ss(1.0, 0.05, q) * ss(1.05, 0.3, t);
+      if ((sy > 0 && abs(sx) < 0.6 + 0.5 * ss(0, 0.1, sy) - 0.2 * ss(0.15, 0.3, sy) + 0.5 * ss(0.3, 0.6, sy)) || hypot(sx / 0.5, (sy + 0.1) / 0.1) < 1 + 0.06 * sin(f * 1.57)) L = 0.04;   // the shadow. it is a little late
+    } else if (u < 0.3) {                                                                                                             // the dormer, and the moon in it
+      M = 1; L = v < 0.74 - 0.16 * (0.3 - u) ? (abs(u - 0.13) < 0.006 || abs(v - 0.34) < 0.006 || u < 0.012 ? 0.1 : 0.95) : 0.2;
+      if (v > 0.74 - 0.16 * (0.3 - u)) M = 0;
+    }
+    if (v > 0.62 + 0.3 * (1.05 - u) * 0.55 || (u < 0.3 && v > 0.78)) { const Z = 0.2 / max(v - 0.55, 1e-3), X = (u - 0.9) * Z; L = (fr(X * 2.4) < 0.08 ? 0.03 : 0.2) * ss(4, 0.4, Z) * ss(1, 0.3, u); if (ell(u, v, 0.6, 0.93, 0.26, 0.04) < 1) L = 0.01; }
+    if (y > 0 && y < 0.62 && abs(x) < hw) { L = x < -hw * 0.45 ? 1 : x < -hw * 0.1 ? 0.5 : 0.1 + 0.12 * sin(x * 90 + y * 9) * ss(0.25, 0.6, y); if (y > 0.6 - 0.02 * sin(x * 60)) L = 0.04; }   // the sheet, and what is under it
+    if (y >= 0.6 && abs(x) < 0.008 && v < 0.93) L = 0.9;
+    for (const sd of [-1, 0.4, 1]) if (dSeg(u, v, cx, 0.86, cx + sd * 0.1, 0.94 + (sd === 0.4 ? 0.015 : 0)) < 0.006) L = 0.8;             // its stand
+    if (hypot(x - 0.02, y - 0.2) < 0.012 || hypot(x - 0.02, y - 0.27) < 0.012) { L = 0; A = 1; }                                             // pins
+    o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // --- cradle: a hooded cradle on its rockers, on the boards, in what moon comes in. it has been set going. the blanket is turned back off the shape of what was under it
+  S.cradle = (u, v, f, o) => {
+    const C = [0.5, 0.3, 1.0], F = [0.05, 3.4, 0.9], E = 1.7, a = 0.035 * sin(f * 0.628), pv = pj(C, F, 0, E, 0), ca = cos(a), sa = sin(a), ru = pv.u + (u - pv.u) * ca + (v - pv.v) * sa, rv = pv.v - (u - pv.u) * sa + (v - pv.v) * ca, B0 = E - 0.16, B1 = E - 0.8;
+    let L = 0.01, A = 0, M = 0, k;
+    const rocker = (rx) => { if ((k = rb(ru, rv, C, F, rx, rx + 0.07, E - 0.4, E + 0.03, -0.74, 0.74)) && hypot(H.z, H.y - E + 1.12) < 1.12 && hypot(H.z, H.y - E + 1.5) > 1.36) L = k === 1 ? (hypot(H.z, H.y - E + 1.5) < 1.385 ? 1 : 0.7) : 0.3; };   // a rocker: a crescent, its horns turned up
+    if (gp(u, v, C, F, E)) {
+      const pool = hypot((H.x + 0.9) / 1.5, (H.z + 1.6) / 1.0);
+      L = (fr(H.x * 2.2 + H.z * 0.15) < 0.06 ? 0.02 : 0.1) * ss(8, 2, H.d);
+      if (pool < 1) L = (abs(H.z + 1.6) < 0.035 || abs(H.x + 0.9) < 0.04 ? 0.2 : fr(H.x * 2.2 + H.z * 0.15) < 0.06 ? 0.4 : 0.95) * ss(1, 0.8, pool);   // the moon on the boards, and the bars of the window in it
+      if (hypot((H.x - 0.3) / 1.0, (H.z - 0.3 + a * 3) / 0.62) < 1) L *= 0.15;                                                           // its shadow, going to and fro with it
+    }
+    rocker(0.5);
+    for (let j = 0; j < 6; j++) {                                                                                                       // the hood, bent over like a wagon tilt
+      const hw = 0.44 * Math.sqrt(1 - ((j + 0.5) / 6.2) ** 2);
+      if ((k = rb(ru, rv, C, F, 0.22, 0.78, B1 - (j + 1) * 0.075, B1 - j * 0.075, -hw, hw))) L = k === 1 ? (abs(H.z) < hw - 0.07 && j < 5 ? 0.01 : 0.95) : k === 5 ? 0.8 - 0.05 * j : k === 3 ? 0.14 + 0.09 * j + 0.05 * fbm(H.s * 5, j) : 0.1;
+    }
+    for (let j = 0; j < 4; j++) {                                                                                                       // the body, wider at the rail than at the floor, like a boat
+      const hw = 0.3 + 0.035 * j, hl = 0.66 + 0.03 * j;
+      if (!(k = rb(ru, rv, C, F, -hl, hl, B0 - (j + 1) * 0.16, B0 - j * 0.16, -hw, hw))) continue;
+      const s = H.s, t = H.t;
+      if (k === 3) L = j === 3 ? (t < 0.45 ? 0.75 : 0.4) : j === 2 ? (fr(s * 15) < 0.4 ? 0.42 : 0.02) : (t < 0.1 ? 0.12 : 0.26 + 0.1 * fbm(s * 5, j * 3 + t));   // rail, spindles, board
+      else if (k === 1) L = 0.5;
+      else if (k === 5 && j === 3) {                                                                                                  // down into it
+        L = s < 0.03 || s > 0.97 || t < 0.07 || t > 0.93 ? 0.9 : 0.01;
+        if (s > 0.05 && s < 0.7 && t > 0.12 && t < 0.88) {
+          L = s > 0.5 ? 0.5 - 0.9 * hypot((s - 0.6) / 0.14, (t - 0.5) / 0.5) * 0.3 : 0.3 + 0.2 * sin(s * 40 + t * 5);                      // sheet; and the blanket, pushed down to the foot
+          if (s > 0.5 && hypot((s - 0.6) / 0.07, (t - 0.5) / 0.26) < 1) L = 0.08;                                                       // the dint
+          if (s <= 0.5 && s > 0.44) L = 0.75;
+        }
+      }
+    }
+    if (rb(ru, rv, C, F, -0.8, -0.75, B1 - 0.22, B0, -0.46, 0.46) === 1) {                                                                // the foot board, shaped, with a heart cut in it
+      const z = H.z, y = H.y, top = B1 - 0.2 * Math.sqrt(max(0, 1 - (z / 0.46) ** 2)), hw = 0.33 + 0.12 * ss(B0, B1, y);
+      if (y > top && abs(z) < hw) { L = y < top + 0.035 || abs(z) > hw - 0.03 ? 1 : 0.62 + 0.1 * fbm(z * 5, y * 30); if (hypot(abs(z) - 0.045, (y - B1 - 0.1) * 1.1) < 0.06 || (y > B1 + 0.1 && abs(z) < 0.1 - (y - B1 - 0.1) * 0.9)) L = 0.02; }
+    }
+    rocker(-0.57);
+    L *= ss(0.82, 0.3, hypot(u - 0.48, v - 0.56));
+    o[0] = min(L, 1); o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // --- stubble: the big field after it has been cut, from the gate. the poles go off along one side. a long way out, one light, low down, where there is no house
+  S.stubble = (u, v, f, o) => {
+    const C = [0.24, 0.4, 0.8], a = (u - C[0]) / C[2], b = (v - C[1]) / C[2], Z = 1.4 / max(b, 1e-3), X = a * Z, mr = hypot(u - 0.78, v - 0.16), lr = hypot(u - 0.34, (v - C[1] - 0.012) * 1.4);
+    let L = 0.02 + 0.3 * fbm(u * 2 + 5, v * 8) ** 1.5 * ss(0.02, 0.36, v), A = 0, M = 1;
+    if (mr < 0.055) L = hypot(u - 0.795, v - 0.15) < 0.05 ? 0.3 : 1;                                                                    // the moon, a paring
+    if (v > C[1] - 0.018 - 0.014 * fbm(u * 7, 3)) { M = 0; L = 0.03; }
+    if (b > 0) { M = 0; L = (abs(fr(X * 3.4) - 0.5) < 0.13 ? 0.06 : fr(Z * 6 + hash(floor(X * 3.4), 1) * 3) < 0.45 ? 0.75 : 0.3) * ss(30, 5, Z) + 0.03; if (fbm(u * 3, v * 40 - 2) > 0.62 && Z > 9) { M = 1; L = 0.45; } }   // the rows, and ground mist lying in the far end of them
+    for (let k = 7; k >= 0; k--) {
+      const z = 2.5 + k * 2.6, sc = C[2] / z, x = C[0] + 2.3 * sc, top = C[1] - 2.6 * sc, bot = C[1] + 1.4 * sc;
+      if (abs(u - x) < 0.02 * sc + 0.001 && v > top && v < bot) { M = 0; L = u < x ? 0.75 : 0.04; }
+      if (abs(v - top - 0.25 * sc) < 0.014 * sc + 0.001 && abs(u - x) < 0.4 * sc) { M = 0; L = 0.04; }                                   // poles, and no wire on them
+    }
+    if (lr < 0.006) { L = 0; A = 1; M = 0; } else A = 0.5 * exp(-lr * 30) * [1, 0.7, 1, 0.4][f];
+    o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // --- post: where the scarecrow was. the post, the crosspiece, the cords that held it cut through. its coat is on the ground, laid out, arms straight
+  S.post = (u, v, f, o) => {
+    const hz = 0.7, Z = 0.3 / max(v - hz, 1e-3), X = (u - 0.3) * Z, sw = 0.014 * sin(f * 1.57);
+    let L = (0.1 + 0.5 * fbm(u * 2.4, v * 6 + 2)) * ss(0.66, 0.05, v), A = 0, M = 1;
+    if (v > hz - 0.012) { M = 0; L = (abs(fr(X * 4.5 - Z * 1.2) - 0.5) < 0.13 ? 0.06 : fr(Z * 9) < 0.5 ? 0.7 : 0.3) * ss(8, 1, Z) + 0.03; }
+    const pw = 0.03 + 0.012 * (v - 0.1);
+    if (v > 0.08 && v < 0.82 && abs(u - 0.44 - 0.03 * (v - 0.08)) < pw) { M = 0; L = u < 0.44 + 0.03 * (v - 0.08) - pw * 0.3 ? 1 : 0.03 + 0.08 * fbm(u * 9, v * 60); }   // the post, from below
+    if (quad(u, v, 0.1, 0.33, 0.86, 0.2, 0.86, 0.255, 0.1, 0.375)) { M = 0; L = v < 0.345 - (u - 0.1) * 0.171 ? 1 : 0.03; }            // the crosspiece
+    for (const [cx, cy, ln] of [[0.16, 0.37, 0.2], [0.78, 0.265, 0.26], [0.46, 0.3, 0.1]]) if (abs(u - cx - sw * (v - cy) / ln) < 0.004 && v > cy && v < cy + ln) { M = 0; L = 0.05; }   // cords
+    if (hypot(u - 0.3, v - 0.34) < 0.008 || hypot(u - 0.62, v - 0.29) < 0.008) { M = 0; L = 0; A = 1; }                                    // nails, bright
+    if (v > hz) {
+      const cx = X - 0.55, cz = Z - 1.5, body = abs(cx) < 0.3 && abs(cz) < 0.5, arm = abs(cz - 0.3) < 0.1 && abs(cx) < 0.95;
+      if (body || arm) { M = 0; L = abs(cx) < 0.02 && body ? 0.5 : 0.04; }                                                              // the coat
+      if (hypot(cx / 0.2, (cz - 0.72) / 0.12) < 1) { M = 0; L = hypot(cx / 0.2, (cz - 0.72) / 0.12) > 0.55 ? 0.5 : 0.04; }                  // and its hat, where a head would be
+    }
+    o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // --- ring: a ring trodden in the stubble, wide as a house. nothing leads to it. in the middle, a boot
+  S.ring = (u, v, f, o) => {
+    const hz = 0.14, Z = 0.55 / max(v - hz, 1e-3), X = (u - 0.6) * Z, r = hypot(X + 0.2, (Z - 2.3) * 1), st = abs(fr(X * 6 + Z * 1.2) - 0.5) < 0.12;
+    let L = 0.3 + 0.3 * fbm(u * 3, v * 9), A = 0, B = 0, M = 1;
+    if (v > hz - 0.01) {
+      M = 0; L = (st ? 0.03 : fr(Z * 7 + hash(floor(X * 6 + Z * 1.2), 2) * 3) < 0.4 ? 0.6 : 0.16) * ss(9, 1.2, Z) + 0.02;
+      if (abs(r - 1.05 - 0.04 * fbm(Math.atan2(Z - 2.3, X + 0.2) * 3, 1)) < 0.17) L = 0.95 - 0.3 * hash(floor(X * 40), floor(Z * 40)) * (fr(Math.atan2(Z - 2.3, X + 0.2) * 9) < 0.3 ? 1.6 : 0.4);    // trodden flat
+      if (r < 0.8 && f === 3 && abs(fr(r * 5 + 0.25) - 0.5) < 0.1) L = 0.9;                                                                   // once a loop there are more of them, inside
+      const sx = (u - 0.42) / 0.105, sy = (v - 0.4) / 0.105;                                                                             // a boot, stood up in the middle of it. a child's, and done for
+      if (hypot((sx - 1.5) / 2.6, (sy - 0.55) / 0.2) < 1) L = 0;                                                                        // the long shadow of it
+      if (sx > -1.3 && sx < 1.9 && sy > -2 && sy < 0.8) {
+        const bt = (x, y) => boot(x + (y < 0 ? 0.1 * sin(y * 3.2) : 0), y, 1.6), far = (x, y) => { for (let i = 1; i < 7; i++) if (bt(x - i * 0.057, y + i * 0.035) >= 0) return i; return 0; };   // the same boot again and again going away: its far side, its top
+        const b = bt(sx, sy), t = b < 0 ? far(sx, sy) : 0;
+        if (b >= 0 || t) {
+          L = b >= 0 ? (sx > 0.5 && abs(sy - 0.33 + 0.1 * sx) < (sx - 0.5) * 0.16 ? 0 : min(b, 1)) : sy + t * 0.035 < -1.3 ? 0 : sy < -0.2 || sx > 0.9 ? 0.16 : 0.5;   // the toe has come away from the sole. the leg is empty
+          if (bt(sx + 0.05, sy - 0.05) < 0 && !far(sx + 0.05, sy - 0.05)) { L = 0; B = 1; }                                             // what light there is, along the far edge of it
+        }
+      }
+    }
+    o[0] = L; o[1] = A; o[2] = B; o[3] = M;
+  };
+
+  // --- fdoor: the door from the trees, stood in its frame in the middle of the field now, seen from behind. it is not quite shut. what comes through the gap is not moonlight
+  S.fdoor = (u, v, f, o) => {
+    const C = [0.74, 0.5, 0.8], a = (u - C[0]) / C[2], b = (v - C[1]) / C[2], Z = 1.5 / max(b, 1e-3), X = a * Z, fl = [1, 0.9, 1, 0.7][f];
+    let L = (0.04 + 0.42 * fbm(u * 2.2 + 9, v * 7)) * ss(0.44, 0.02, v), A = 0, M = 1;
+    if (hypot(u - 0.2, v - 0.14) < 0.05) L = 1;
+    if (v > C[1] - 0.016 - 0.012 * fbm(u * 8, 4)) { M = 0; L = 0.03; }
+    if (b > 0) {
+      M = 0; L = (abs(fr(X * 3) - 0.5) < 0.13 ? 0.06 : fr(Z * 6) < 0.45 ? 0.72 : 0.3) * ss(22, 3, Z) + 0.03;
+      const sh = X + 1.55 - (Z - 5) * 0.55;                                                                                           // its shadow, the long way, toward us
+      if (Z < 5 && Z > 1.2 && sh > -0.02 && sh < 1.0 + (5 - Z) * 0.12) L = 0.03;
+      const wg = (X + 0.72) + (5 - Z) * 0.1;
+      if (Z < 5 && Z > 1.5 && abs(wg) < 0.03 + (5 - Z) * 0.09) { L = 0; A = fl * ss(1.2, 4.6, Z); }                                         // and the light through the gap, the short way
+    }
+    const fr0 = pb(u, v, C, -1.7, -0.6, -1.9, 1.5, 5, 5.12), s = W.s, t = W.t;
+    if (fr0 === 1) { M = 0; L = s < 0.07 || s > 0.93 || t < 0.04 ? 0.5 : 0.1 + 0.05 * fbm(s * 5, t * 40); if (s >= 0.07 && s <= 0.93 && t > 0.04) { if (abs(fr(t * 2.6 + 0.15) - 0.5) > 0.4 || abs(s - 0.5) < 0.03) L = 0.2; if (s > 0.86) { L = 0; A = fl; } if (hypot((s - 0.16) * 1.1 / 3.4 * 3.4, (t - 0.55) * 3.1) < 0.045) L = 0.8; } }
+    else if (fr0 === 2) { M = 0; L = 0.9; }
+    o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // --- hatch: a hatch in the headland, one leaf flat on the grass and one stood up. steps down. it is lit down there, and warm coming up, and somebody has left their shoes at the top
+  S.hatch = (u, v, f, o) => {
+    const C = [0.5, 0.06, 0.95], F = [0.25, 4.3, 0.5], E = 2.3, fl = [1, 0.92, 1, 0.85][f];
+    let L = 0.02, A = 0, B = 0, M = 0, k;
+    if (gp(u, v, C, F, E)) {
+      const x = H.x, z = H.z, d = H.d, open = abs(x) < 0.9 && abs(z) < 0.6;
+      L = (0.04 + 0.5 * fbm(x * 6, z * 6) ** 2 + (hash(floor(x * 40), floor(z * 40)) > 0.9 ? 0.35 : 0)) * ss(14, 3, d);                    // rough grass
+      if (abs(x) < 1.04 && abs(z) < 0.74 && !open) L = fr((abs(x) > 0.9 ? z : x) * 3) < 0.06 ? 0.2 : 0.9;                                 // the curb
+      if (open) {
+        k = rb(u, v, C, F, -0.9, 0.9, E, E + 2.4, -0.6, 0.6, 1);                                                                       // down the hole: boarded sides, the light coming up them
+        const dp = (H.y - E) / 2.4;
+        L = k === 6 ? 0 : (fr(H.y * 4) < 0.1 ? 0.03 : 0.3) * (1 - dp) * (k === 4 ? 1 : 0.5); A = fl * (k === 6 ? 0.95 : 0.2 + 0.75 * dp * dp);
+        for (let i = 5; i >= 0; i--) if ((k = rb(u, v, C, F, -0.9 + i * 0.3, -0.6 + i * 0.3, E + 0.12 + i * 0.36, E + 2.4, -0.6, 0.6))) { A = k === 5 ? 0.12 : k === 2 ? fl * 0.75 : 0.3 * fl; L = k === 5 ? 0.85 - 0.12 * i : k === 3 ? 0.3 - 0.04 * i : 0; }   // treads, each one lit on the riser from under
+      }
+    } else L = 0.02 + 0.12 * fbm(u * 3, v * 30);
+    if ((k = rb(u, v, C, F, -0.9, 0.9, E - 0.07, E, 0.78, 2.0))) { L = k === 5 ? (fr(H.s * 6) < 0.06 ? 0.1 : abs(H.t - 0.2) < 0.05 || abs(H.t - 0.8) < 0.05 ? 0.95 : 0.6 + 0.1 * fbm(H.s * 40, H.t * 3)) : 0.25; A = 0; if (k === 5 && abs(hypot((H.s - 0.5) * 1.5, H.t - 0.5) - 0.07) < 0.018) L = 0.05; }   // one leaf, flat on the grass: boards, two ledges, a ring
+    if ((k = rb(u, v, C, F, 0.98, 1.05, E - 1.25, E, -0.6, 0.6))) { L = k === 1 ? (fr(H.s * 6) < 0.06 ? 0.02 : abs(H.t - 0.2) < 0.05 || abs(H.t - 0.8) < 0.05 ? 0.3 : 0.12) : 0.5; A = k === 1 ? fl * (0.25 + 0.6 * H.t) * (fr(H.s * 6) < 0.06 ? 0 : 1) : 0; }   // the other, stood up, the light on the inside of it
+    if (rb(u, v, C, F, 0.5, 1.02, E - 1.2, E, -0.75, -0.7) === 3 && abs(H.t - 1 + H.s * 0.95) < 0.05) { L = 0.8; A = 0; }                    // and the prop holding it
+    for (const [sx, sz] of [[-0.42, -1.12], [-0.12, -1.16]]) if ((k = rb(u, v, C, F, sx, sx + 0.2, E - 0.11, E, sz, sz + 0.5))) {         // shoes, side by side, toes to the edge
+      const e = hypot(H.s * 2 - 1, H.t * 2 - 1.1); L = 0; A = 0; B = k === 5 ? (e > 1.15 ? 0 : H.t < 0.55 && hypot((H.s - 0.5) / 0.3, (H.t - 0.3) / 0.24) < 1 ? 0 : 1) : 0.8;
+      if (k === 5 && e > 1.15) { B = 0; L = 0.3; } if (k !== 5 && H.t > 0.7) { B = 0; L = 0.03; }
+    }
+    L *= ss(0.9, 0.35, hypot(u - 0.5, v - 0.55));
+    o[0] = min(L, 1); o[1] = min(A, 1); o[2] = B; o[3] = M;
+  };
+  // house2>>
+
+  // <<who
+  // --- who is reading: one plate for each way in. a thing left where its owner would know it
+  const seg = (u, v, a, b) => { const ex = b.u - a.u, ey = b.v - a.v, n = ex * ex + ey * ey, t = ((u - a.u) * ex + (v - a.v) * ey) / n; return [t, ((u - a.u) * ey - (v - a.v) * ex) / Math.sqrt(n)]; };   // along a to b (0..1), and how far off to one side
+  const glyph = (G, s, t) => { const cx = floor(s * (G.length * 4 - 1)), cy = floor(t * 5); return s >= 0 && s < 1 && t >= 0 && t < 1 && cx % 4 < 3 && (G[cx >> 2][cy] >> (2 - (cx % 4))) & 1; };
+  // watcher: a brass glass on its legs at an unlit window, laid on the one lit window across the water
+  S.watcher = (u, v, f, o) => {
+    const C = [0.52, 0.5, 1.0], F = [0.35, 3.3, -0.4], E = 1.5;
+    let L = 0.02, A = 0, M = 0, k;
+    if (gp(u, v, C, F, E) && H.z < 0) { const m = abs(H.x + 0.2 * H.z) < 0.85 && H.z > -2.7, bar = abs(H.x + 0.2 * H.z) < 0.035 || abs(H.z + 1.3) < 0.05; L = (fr(H.x * 2.4) < 0.06 ? 0.02 : m && !bar ? 0.6 * ss(-2.7, -1.2, H.z) + 0.1 : 0.07) * ss(8, 1.5, H.d); }   // boards, and what moon the window lets in
+    if (rb(u, v, C, F, -9, 9, -5, E, 0, 1) === 3) {
+      const x = H.x, y = H.y;
+      L = 0.045 * (fr(x * 4.5) < 0.07 ? 0.4 : 1);
+      if (abs(x) < 1.02 && y > -1.77 && y < 0.3) {
+        L = x < -0.9 || y < -1.65 ? 0.85 : 0.4;                                                                                         // the sash
+        if (abs(x) < 0.9 && y > -1.65 && y < 0.22) {
+          const roof = -0.42 - 0.1 * hash(floor(x * 10), 3) - (fr(x * 10) < 0.5 ? 0.05 : 0), gx = abs(x - 0.33);
+          M = 1; L = y < -0.42 ? 0.1 + 0.14 * fbm(x * 3, y * 8) : fr(y * 40) < 0.2 ? 0.16 * ss(0.3, -0.4, y) : 0.01;                        // sky; the water
+          if (y > roof && y < -0.42) { L = 0.01; M = 0; }                                                                               // the town, across it
+          if (gx < 0.03 && abs(y + 0.48) < 0.035) { L = 0; A = [1, 1, 0.7, 1][f]; M = 0; }                                                // and the one window
+          else if (y > -0.4 && gx < 0.035 * (0.3 + hash(floor(y * 70), f))) A = 0.85 * ss(0.2, -0.4, y);
+          else A = 0.4 * exp(-hypot(gx, y + 0.48) * 22);
+          if (abs(x) < 0.022 || abs(y + 0.72) < 0.022) { L = 0.6; A = 0; M = 0; }
+        }
+      }
+    }
+    if ((k = rb(u, v, C, F, -1.12, 1.12, 0.3, 0.38, -0.24, 0))) L = k === 5 ? 0.9 : k === 3 ? 0.35 : 0.2;                                 // the sill
+    const hd = pj(C, F, 0.02, -0.26, -1.0);
+    for (const [fx, fz] of [[-0.5, -1.45], [0.5, -1.3], [0.05, -0.45]]) { const ft = pj(C, F, fx, E, fz), [t, d] = seg(u, v, hd, ft); if (t > 0 && t < 1 && abs(d) < 0.007 * (hd.k + t * (ft.k - hd.k)) * 3) L = d < 0 ? 0.85 : 0.3; }   // its legs
+    const a = pj(C, F, -0.2, -0.2, -1.55), b = pj(C, F, 0.2, -0.52, -0.42), [t, d] = seg(u, v, a, b), r = (a.k + t * (b.k - a.k)) * (t < 0.24 ? 0.06 : t < 0.6 ? 0.08 : 0.1), q = d / r;
+    if (t > 0 && t < 1 && abs(q) < 1) { L = abs(t - 0.24) < 0.012 || abs(t - 0.6) < 0.012 || t > 0.975 || t < 0.02 ? 0.05 : q > 0.45 ? 1 : q > -0.35 ? 0.6 : 0.14; if (t < 0.035 && t >= 0.02 && q > 0.2) { L = 0; A = 1; } }   // the glass: three draws, brass, bright along the top
+    o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // knocker: a front door, close to. the knocker is brass, an eagle with its wings out and a bail hung from its feet, the kind every porch on the street had. now and then the bail is lifted. over it a spy hole; down on the lock side a knob and the keyhole under it; and through both holes a little of what is on behind the door
+  const eagle = (x, y, rr) => {
+    const ax = abs(x), e = ell(x, y, 0, -0.34, 0.25, rr);
+    if (hypot(x + 0.03, y + 0.86) < 0.1 || (x < -0.1 && x > -0.26 && y > -0.9 && y < -0.9 + (x + 0.26) * 0.75) || ell(x, y, 0, -0.62, 0.11, 0.2) < 1) return 2;   // head, beak, breast
+    if (ax > 0.05 && ax < 0.56 && y > -0.86 + 0.42 * ax ** 1.5 && y < -0.56 + 0.06 * ax - 0.035 * abs(sin(ax * 28)) - max(0, ax - 0.42) * 2) return 3;   // wings, the feathers cut along the lower edge
+    if (y > -0.47 && y < -0.3 && ax < 0.05 + (y + 0.47) * 0.45 && fr(ax * 16) < 0.8) return 2;                                           // tail
+    if (hypot(ax - 0.25, y + 0.34) < 0.05) return 4;                                                                                   // the two bosses the bail swings on
+    if ((e < 1.08 && e > 0.84 && y > -0.34) || hypot(x, y + 0.34 - rr) < 0.065) return 5;                                               // the bail, and the knob it strikes with
+    return ell(x, y, 0, -0.46, 0.2, 0.27) < 1 ? 1 : 0;                                                                                 // the plate behind it all
+  };
+  S.knocker = (u, v, f, o) => {
+    const C = [0.57, 0.6, 1.0], F = [0, 2.55, 0.72], fl = [1, 0.85, 1, 0.92][f], rr = f === 3 ? 0.2 : 0.36, off = f === 3 ? 0.1 : 0.05;
+    let L = 0.02, A = 0, M = 0;
+    if (rb(u, v, C, F, -9, 9, -5, 5, 0, 1) === 3) {
+      const x = H.x, y = H.y, lg = lamp(-0.7, -0.9, -1.1, 2.6), l = min(1.4, 0.3 + 2 * lg), pd = hypot(x, y + 1.28), k = eagle(x, y, rr), kx = x + 0.87, kd = hypot(kx, (y - 0.63) / 1.5), hole = hypot(kx, y - 0.6) < 0.028 || (abs(kx) < 0.013 && y > 0.6 && y < 0.69), nd = hypot(kx, y - 0.27);
+      L = (abs(x) > 1.2 ? 0.5 * brick(x * 0.5, y * 0.5, 7) : abs(x) > 1.05 ? (x < -1.17 ? 1 : 0.7) : abs(abs(x) - 0.72) < 0.03 || (abs(x) < 0.72 && (abs(y + 1.62) < 0.03 || abs(y - 1.0) < 0.03)) ? (x < -0.7 || y < -1.6 || (y > 0.97 && y < 1) ? 0.04 : 0.6) : abs(x) > 0.72 || y < -1.62 || y > 1 ? 0.2 + 0.08 * fbm(x * 3, y * 40) : 0.09 + 0.07 * fbm(x * 5, y * 50)) * l;   // brick, the case, and the door: paint over grain, one long panel sunk in it
+      if (eagle(x - off * 1.2, y - off, rr)) L *= 0.1;                                                                                   // what it throws on the paint
+      if (hypot(x, y - 0.03) < 0.06) L = 0.8 * l;                                                                                       // where the knob comes down
+      if (k) {
+        const lit = !eagle(x + 0.035, y + 0.035, rr), shade = !eagle(x - 0.035, y - 0.035, rr);
+        L = (lit ? 1 : shade ? 0.1 : k === 1 ? 0.3 : k === 3 ? (fr(abs(x) * 14 + y * 5) < 0.25 ? 0.3 : 0.8) : k === 5 ? 0.9 : 0.72) * min(1, 0.55 + l);
+        if (k === 2 && hypot(x + 0.06, y + 0.89) < 0.02) L = 0;                                                                         // its eye
+      }
+      if (kd < 0.09) L = kd > 0.072 ? 0.9 * l : 0.45 * l;                                                                               // the escutcheon
+      if (hypot(kx - 0.07, y - 0.32) < 0.1 && nd > 0.1) L *= 0.1;                                                                         // the knob: a rose, and a brass ball stood off it
+      if (nd < 0.125) L = nd > 0.1 ? (y < 0.27 ? 0.8 : 0.3) * l : hypot(kx + 0.03, y - 0.235) < 0.03 ? 1 : nd > 0.078 ? 0.12 : kx + (y - 0.27) > 0.04 ? 0.35 : 0.8;
+      if (pd < 0.07) L = pd > 0.05 ? 0.9 * l : 0.3 * l;                                                                                // the spy hole, in its brass
+      if (hole || pd < 0.028) { L = 0; A = fl; } else A = 0.4 * fl * max(exp(-hypot(kx, y - 0.63) * 26), exp(-pd * 30));
+    }
+    o[0] = min(L, 1); o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // stray: a pole on the road in. a bill nailed to it, LOST, the picture torn off, and the sign chalked under it. the cat is sat in the road. a long way behind it, two lamps coming
+  const LOST = [[4, 4, 4, 4, 7], [7, 5, 5, 5, 7], [7, 4, 7, 1, 7], [7, 2, 2, 2, 2]];
+  S.stray = (u, v, f, o) => {
+    const C = [0.36, 0.6, 1.0], F = [0.1, 1.9, 1.2], E = 1.6, hl = pj(C, F, 34, E - 0.8, 3.0), ct = pj(C, F, 3.2, E, 0.2);
+    let L = 0.06 + 0.2 * ss(0, 0.4, v) * (0.5 + fbm(u * 2, v * 9)), A = 0, B = 0, M = 1, k;
+    if (v > C[1] - 0.03 - 0.03 * fbm(u * 7, 3)) { M = 0; L = 0.02; }
+    if (gp(u, v, C, F, E)) {
+      const l = lamp(0.3, E, -0.4, 1.5), z = H.z;
+      M = 0; L = (z < 0.7 ? (abs(z - 0.62) < 0.07 ? 0.8 : 0.16 + 0.3 * hash(floor(H.x * 40), floor(z * 40))) : z > 5.3 ? 0.03 : abs(z - 3) < 0.07 && fr(H.x * 0.4) < 0.5 ? 0.9 : 0.3 + 0.25 * hash(floor(H.x * 20), floor(z * 20))) * (1.1 + 1.5 * l) * ss(70, 8, H.d);   // verge, kerb, the road and its line
+      if (hypot((H.x - 0.5) / 0.9, (z - 0.25) / 0.2) < 1 || hypot((H.x - 2.6) / 0.7, (z - 0.2) / 0.09) < 1) L *= 0.15;
+    }
+    for (const sd of [-1, 1]) { const d = hypot(u - hl.u - sd * 0.014, v - hl.v); if (d < 0.006) { L = 0; B = 1; M = 0; } else B = max(B, 0.5 * exp(-d * 60) * [1, 0.9, 1, 1][f]); }   // the bus
+    if ((k = rb(u, v, C, F, -0.14, 0.14, -6, E, -0.14, 0.14))) {                                                                         // the pole
+      const y = H.y, s = 1 - H.s, b = (y + 1.08) / 0.9;
+      M = 0; B = 0; L = k === 1 ? (fr(s * 5 + 0.3 * sin(y * 2)) < 0.12 ? 0.1 : 0.42 + 0.14 * fbm(s * 3, y * 6)) * (0.5 + 0.5 * ss(-2.5, -0.3, y)) : 0.1;
+      if (k === 1 && s > 0.06 && s < 0.94 && b > 0 && b < 1) {                                                                          // the bill
+        L = 1;
+        if (glyph(LOST, (s - 0.2) / 0.6, (b - 0.07) / 0.2)) L = 0;
+        if (s > 0.24 && s < 0.76 && b > 0.34 && b < 0.72) L = b > 0.66 - 0.05 * hash(floor(s * 22), 1) || s < 0.27 || s > 0.73 || b < 0.36 ? 0.5 : 0.04;   // where the picture was
+        if (b > 0.78 && fr(b * 18) < 0.4 && s > 0.16 && s < 0.84 && hash(floor(s * 20), floor(b * 18)) > 0.25) L = 0.1;
+      } else if (k === 1 && hypot((s - 0.5) / 0.48, (y - 0.2) / 0.15) < 1 + 0.25 * (fbm(s * 9, y * 9) - 0.5)) L = sigil((s - 0.5) / 0.44, (y - 0.2) / 0.125, 0, 0.12) ? 0.02 : 1;   // the sign, on a daub of whitewash
+    }
+    const mx = (u - ct.u) / (ct.k * 1.5), my = (v - ct.v) / (ct.k * 1.5), m = mog(mx, my, 0.5 * (fbm(mx * 46, my * 46) - 0.5), f === 3 ? 0.4 : 1) || (my > -0.445 && my < -0.34 && abs(mx + 0.016) < (my + 0.445) * 0.3 ? 1 : 0);   // the cat. at this size its near ear wants help   // the cat
+    if (m) { M = 0; B = 0; A = m === 2 ? 1 : 0; L = m === 1 && !mog(mx + 0.012, my - 0.004, 0, 0) ? 0.9 : 0; }                                   // the lamps behind it catch one edge
+    o[0] = L; o[1] = A; o[2] = B; o[3] = M;
+  };
+
+  // hand: the bench by the looms. a pair of gloves put down the way they came off, and a brass check with a number nobody can read
+  S.hand = (u, v, f, o) => {
+    const C = [0.5, 0.1, 1.0], F = [-0.05, 2.0, 0.4], Y = 0.95, fl = [1, 0.93, 1, 0.97][f], bl = pj(C, F, 0, -0.1, 0.25), br = hypot(u - bl.u, v - bl.v);
+    let L = 0.02, A = 0, M = 0, k;
+    if (gp(u, v, C, F, 2.0)) L = (fr(H.x * 2.2) < 0.06 ? 0.02 : 0.07) * ss(8, 2, H.d);
+    if ((k = rb(u, v, C, F, -1.9, 1.9, Y, Y + 0.12, -0.8, 0.8))) {
+      if (k !== 5) L = k === 3 ? 0.3 : 0.1;
+      else {
+        const x = H.x, z = H.z, l = fl * lamp(0, Y, 0.1, 1.1);
+        let t = fr(z * 3.1) < 0.05 ? 0.25 : 0.55 + 0.25 * fbm(x * 9, floor(z * 3.1) * 3 + z * 0.5), sh = 0, g = -1;                         // deal boards, the grain along them
+        for (const [gx, gz, rt, sd] of [[-0.5, 0.1, 0.4, 1], [0.3, -0.12, -0.5, -1]]) {
+          const c = cos(rt), s = sin(rt), px = (x - gx) / 0.5, pz = -(z - gz) / 0.5, dx = (px * c + pz * s) * sd, dy = pz * c - px * s;
+          const in_ = (a, b) => paw(a, b, 0, 0.13) || (abs(a) < 0.5 + 0.08 * (b - 0.7) && b > 0.68 && b < 1.4);
+          if (in_(dx - 0.16 * sd, dy - 0.18)) sh = 1;
+          if (in_(dx, dy)) g = !in_(dx + 0.07 * sd, dy + 0.07) ? 0.12 : !in_(dx - 0.05 * sd, dy - 0.05) ? 1                                                 // the under edge in shade, the upper edge lit
+            : dy > 0.68 ? (dy < 0.8 || dy > 1.3 ? 0.3 : abs(fr(dx * 5 + 0.3 * sin(dy * 9)) - 0.5) < 0.12 ? 0.3 : 0.72)                                             // the gauntlet, in folds
+            : dy < 0.05 ? (abs(fr(dy * 3.4 + 0.25 * sin(dx * 20)) - 0.5) < 0.09 ? 0.25 : paw(dx - 0.02 * sd, dy, 0, 0.06) ? 0.95 : 0.55)                         // fingers: creased at each joint, round, light along the top of each
+            : abs(fr(dx * 4.2 + 0.5) - 0.5) < 0.04 && dy < 0.5 ? 0.25 : abs(fbm(dx * 5, dy * 11) - 0.5) < 0.035 ? 0.3 : hypot(dx + 0.1 * sd, dy - 0.3) < 0.26 ? 0.92 : 0.62;   // the back: three darts, wrinkles, the swell of it
+        }
+        const cd = hypot(x - 1.02, z - 0.22) * 0.85;
+        L = (g >= 0 ? g : sh ? t * 0.1 : t * 0.75) * (g >= 0 ? 0.35 : 0.08) + (g >= 0 ? g : sh ? 0 : t * 0.75) * min(1, 2 * l) * (g >= 0 ? 0.65 : 0.92);
+        if (g < 0 && hypot(x - 1.07, z - 0.17) < 0.17) L *= 0.15;
+        if (cd < 0.17) { L = 0; A = cd > 0.14 || hypot(x - 1.02, z - 0.32) < 0.03 || (abs(z - 0.19) < 0.035 && abs(x - 1.02) < 0.09 && fr(x * 22) < 0.6) ? 0.3 : 1; }   // the check: a rim, a hole to hang it by, a number
+      }
+    }
+    if (abs(u - bl.u) < 0.003 && v < bl.v) L = 0.4;
+    if (br < 0.02) { L = 0; A = fl; } else A = max(A, 0.7 * fl * exp(-br * 26));
+    o[0] = min(L, 1); o[1] = A; o[2] = 0; o[3] = M;
+  };
+
+  // keeper: a nail in the wall, the big ring on it, every key of the street. the rules pinned up beside. a lantern on the shelf, lit, the way it is left for whoever has the round
+  S.keeper = (u, v, f, o) => {
+    const C = [0.5, 0.5, 1.0], F = [0.3, 3.1, -0.45], E = 1.6, fl = [1, 0.9, 1, 0.95][f], lc = pj(C, F, 0.6, 0.36, -0.22), lr = hypot(u - lc.u, v - lc.v);
+    let L = 0.02, A = 0, M = 0, k;
+    if (rb(u, v, C, F, -9, 9, -5, E, 0, 1) === 3) {
+      const x = H.x, y = H.y, lg = fl * lamp(0.6, 0.3, -0.22, 2), l = 0.35 + 0.65 * min(1, 2 * lg);
+      const iron = (xx, yy) => {                                                                                                       // the ring and what hangs on it: bow, shank, bit, five times
+        const e = hypot(xx + 0.45, yy + 0.85) / 0.3;
+        if (e < 1.06 && e > 0.93) return 1;
+        for (let i = 0; i < 5; i++) { const an = (i - 2) * 0.3, kx = xx + 0.45 - 0.3 * sin(an), ky = yy + 0.85 - 0.3 * cos(an) - 0.07, ln = [0.5, 0.72, 0.62, 0.8, 0.55][i], bw = hypot(kx, ky); if ((bw < 0.085 && bw > 0.045) || (abs(kx) < 0.02 && ky > 0.07 && ky < ln) || (kx > 0 && kx < 0.09 && ky > ln - 0.12 && ky < ln && fr(ky * 22 + i * 0.3) < 0.62)) return 2; }
+        return 0;
+      };
+      const ir = iron(x, y), a = (x - 0.5) / 0.75, b = (y + 1.6) / 0.95;
+      L = (0.02 + 0.3 * lg) * (0.7 + 0.5 * fbm(x * 3, y * 3)) * (fr(y * 1.4 + 0.2) < 0.02 ? 0.5 : 1);                                     // limewash
+      if (iron(x + 0.07, y - 0.06)) L *= 0.12;
+      if (a > 0 && a < 1 && b > 0 && b < 1) {                                                                                           // the rules
+        const r = fr(b * 8), row = floor(b * 8);
+        L = a < 0.04 || b > 0.97 ? 0.3 * l : l;
+        if (row === 0 ? r > 0.3 && a > 0.25 && a < 0.75 : row < 7 && r > 0.35 && r < 0.7 && a > 0.1 && a < 0.9 && hash(floor(a * 26), row) > 0.25) { L = 0.04; if (row === 4) { L = 0; A = 1; } }   // one of them is underlined in red. you know which
+        if (hypot(a - 0.5, (b - 0.04) * 1.3) < 0.035) L = 0.02;
+      }
+      if (ir) L = (ir === 1 ? (hypot(x + 0.45, y + 0.85) > 0.29 ? 0.5 : 1) : fr(x * 60) < 0.5 ? 1 : 0.7) * l;
+      if (hypot(x + 0.45, y + 1.15) < 0.035) L = 1;
+    }
+    if ((k = rb(u, v, C, F, 0.05, 1.25, 0.62, 0.7, -0.45, 0))) L = k === 5 ? 0.85 : k === 3 ? 0.3 : 0.5;                                  // the shelf
+    if ((k = rb(u, v, C, F, 0.44, 0.76, 0.54, 0.62, -0.38, -0.06))) L = k === 5 ? 0.7 : k === 3 ? 0.4 : 0.8;                              // the lantern: foot, four panes, a tin cap, a ring to carry it by
+    if ((k = rb(u, v, C, F, 0.47, 0.73, 0.16, 0.54, -0.35, -0.09))) { const ed = H.s < 0.1 || H.s > 0.9 || H.t < 0.05 || H.t > 0.95; L = ed ? 0.75 : 0; A = ed ? 0 : fl * (hypot(H.s - 0.5, (H.t - 0.62) * 1.6) < 0.16 ? 1 : 0.62); }
+    if ((k = rb(u, v, C, F, 0.42, 0.78, 0.08, 0.16, -0.4, -0.04))) { L = k === 5 ? 0.6 : k === 3 ? 0.15 : 0.45; A = 0; }
+    const hn = pj(C, F, 0.6, 0.0, -0.22); if (abs(hypot(u - hn.u, (v - hn.v) * 1.1) - 0.045 * hn.k) < 0.007 * hn.k && v < hn.v + 0.02) L = 0.7;
+    if (A < 0.5) A = max(A, 0.5 * fl * exp(-lr * 22));
+    o[0] = min(L, 1); o[1] = A; o[2] = 0; o[3] = M;
+  };
+  // who>>
+
   // per scene: n frames (default 4), seq = playback order, one entry per tick, so a short loop can hold its odd frame back
   const META = {
     town: { seq: [0, 1, 0, 1, 2, 1, 0, 1, 0, 3] }, kitchen: { seq: [0, 0, 1, 1, 2, 3, 3, 3] }, woods: { seq: [0, 1, 2, 1, 0, 1, 2, 3] },
@@ -1866,6 +2983,8 @@
     window: { seq: [0, 1, 2, 1, 0, 2, 1, 0, 1, 3] }, tv: { seq: [0, 1, 2, 0, 1, 2, 1, 0, 2, 3] }, well: { seq: [0, 1, 3, 1, 0, 1, 3, 1, 0, 2] },
     field: { seq: [0, 0, 0, 0, 0, 0, 0, 0, 3, 3] }, porch: { seq: [0, 1, 2, 1] }, yard: { seq: [0, 1, 2, 1] },
     birches: { seq: [0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 3, 3, 2, 1] }, swing: { seq: [0, 0, 1, 2, 2, 3] }, pier: { seq: [0, 1, 0, 1, 0, 1, 0, 1, 3, 3] }, hall: { seq: [0, 0, 0, 0, 0, 0, 0, 0, 3, 3] }, mantel: { seq: [0, 0, 0, 0, 0, 0, 0, 3] }, rungs: { seq: [0, 1, 2, 1, 0, 1, 2, 1, 3, 3] }, lighthouse: { seq: [0, 0, 1, 2, 2, 3] }, oak: { seq: [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 3] }, grove: { seq: [0, 0, 1, 1, 2, 2, 1, 1, 0, 0, 3, 3] }, pond: { seq: [0, 0, 1, 1, 2, 2, 3, 3] }, drowned: { seq: [0, 0, 1, 1, 2, 2, 1, 1, 0, 0, 1, 1, 2, 2, 3, 3] }, mound: { seq: [0, 0, 1, 1, 2, 2, 3, 3] },
+    looms: { seq: [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 3] }, chain: { n: 2, seq: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0] }, paywin: { n: 7, seq: [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 3, 4, 5, 6, 3] }, adit: { seq: [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 3, 3] }, junction: { seq: [0, 1, 2, 1, 0, 1, 2, 3] }, tally: { seq: [0, 0, 0, 0, 0, 0, 0, 0, 3, 3] }, spares: { seq: [0, 0, 0, 0, 0, 0, 0, 0, 0, 3] },
+    chute: { n: 6, seq: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 5, 4] }, halt: { seq: [0, 0, 1, 2, 0, 0, 1, 0, 3, 3] }, signal: { seq: [0, 0, 0, 0, 0, 1, 2, 3, 3, 3, 3, 2] }, ring: { seq: [0, 0, 0, 0, 0, 0, 0, 3] }, cradle: { n: 10 }, keys: { seq: [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 3, 3, 0] }, knocker: { seq: [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 3, 3, 0] }, stray: { seq: [0, 0, 1, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 2, 0, 3] },
     wrack: { seq: [0, 0, 1, 1, 2, 2, 3, 3] }, mainst: { seq: [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3] }, storefront: { seq: [0, 1, 2, 1, 0, 1, 2, 1, 0, 3] },
   };
   const frames = (id) => META[id]?.n || 4;

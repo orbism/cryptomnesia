@@ -18,8 +18,11 @@ const data = pages.slice(0, a) + `  const PAGES = ${JSON.stringify(lean)};\n` + 
 const run = "(()=>{const g=DFDATA.PAGES[P],s=DF.mount(document.getElementById('c'),{...g,w:DFDATA.PW,h:DFDATA.PH},DFDATA.pal(g));let t=0;setInterval(()=>s(++t),220)})()";
 const min = async (s) => (await transform(s, { minify: true, target: 'es2020' })).code;
 
+// the plates that tell a reader who they are belong to the site: no token shows one
+const engine = read('src/engine.js').replace(/  \/\/ <<who\n[\s\S]*?  \/\/ who>>\n/, '');
+
 export async function pack() {
-  const js = (await min(read('src/engine.js'))) + (await min(data)) + run, gz = gzipSync(js, { level: 9 });
+  const js = (await min(engine)) + (await min(data)) + run, gz = gzipSync(js, { level: 9 });
   const chunks = [];
   for (let i = 0; i < gz.length; i += CHUNK) chunks.push(gz.subarray(i, i + CHUNK));
   mkdirSync(root + 'contracts/art', { recursive: true });

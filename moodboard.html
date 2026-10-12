@@ -87,7 +87,7 @@ section { display: grid; gap: 18px; padding-block: 34px; border-bottom: 1px soli
     <div class="say">
       <span class="label">Choose-your-own horror · design board</span>
       <h1>Cryptomnesia</h1>
-      <p class="lede">The design board. The game itself now runs as an app from the same engine and page recipes; this page stays as the place to react to art and words. Latest: wheels turned with the truck, warm headlamps, a moonlit truck on the turnout, the first sign back on the lawn, a cursor on the choices.</p>
+      <p class="lede">The design board. The game itself now runs as an app from the same engine and page recipes; this page stays as the place to react to art and words. Latest: all thirty-two new plates redrawn after the first pass. They are now built as boxes in real space, so walls, doors and objects share their vanishing points. Lamps are small and tight and the rooms are lit by contrast, not by a wash of colour. The works runs on copper light; the level on orange, red and grey-blue; the basement on tungsten. Still marked new.</p>
       <div class="tabs" role="tablist">
         <button role="tab" id="tab-art" aria-controls="p-art">Art</button>
         <button role="tab" id="tab-story" aria-controls="p-story">Story</button>
@@ -103,7 +103,7 @@ section { display: grid; gap: 18px; padding-block: 34px; border-bottom: 1px soli
     <section>
       <span class="label">The way in</span>
       <h2>Three questions pick where you start</h2>
-      <p class="lede">Answer them to try it. Each disposition opens on a different page and bends the story a little.</p>
+      <p class="lede">Answer them to try it. Each disposition opens on a different page and bends the story a little. The plate on each card is what the “You are…” screen shows.</p>
       <div class="quiz" id="quiz"></div>
       <p id="quizout" aria-live="polite"></p>
       <div class="grid" id="entries"></div>
@@ -282,7 +282,43 @@ section { display: grid; gap: 18px; padding-block: 34px; border-bottom: 1px soli
 <script src="src/pages.js"></script>
 <script>
 const { PAGES, QUIZ, ENTRIES, PW, PH, pal, walks, repeats } = DFDATA;
+const NEWS = [
+  ['works', 'The works', 'From the quarry road. Shut forty years. One bay lit, the stack drawing.'],
+  ['whistle', 'Yard clock', 'The boiler-house corner. No hands on the clock. The whistle goes anyway.'],
+  ['chain', 'Cut chain', 'The gate, close to. The lock hangs open and the cut is bright.'],
+  ['looms', 'Weaving shed', 'Every loom running. Once a loop somebody minds the last.'],
+  ['flywheel', 'Engine wheel', 'Going round with nothing driving it.'],
+  ['coat', 'Pegs', 'One coat, a cap, a tin. The tea is still hot.'],
+  ['paywin', 'Pay hatch', 'Brass bars, a lamp behind, packets on the sill. Once a loop, a hand.'],
+  ['keys', 'Key board', 'A hook for every door. One bare. One will not hang still.'],
+  ['ledger', 'Wages book', 'Open at this week. The last line is wet.'],
+  ['shaft', 'In the well', 'A third of the way down. Wet hands on the stones, all going in.'],
+  ['ledge', 'Lamp on a ledge', 'Left burning. The roof drips where it always has.'],
+  ['adit', 'The level', 'Timbered, tub rails. A light a long way in, and once a loop it is nearer.'],
+  ['cart', 'Tub', 'Off the road, on its side. Boots, all left ones.'],
+  ['junction', 'Three ways', 'A sign chalked over each. One is lit from inside.'],
+  ['cavern', 'The gallery', 'Still water, steps cut down to it, a light and its twin.'],
+  ['tally', 'Tally', 'Kept in fives, right the way back. The last gate wants one stroke.'],
+  ['basement', 'Under Dunn’s', 'From the foot of the stair. One bulb.'],
+  ['spares', 'Spares', 'Arms, a box of hands, heads turned to the wall. Once a loop one is not.'],
+  ['boiler', 'Furnace', 'Alight, and just fed.'],
+  ['chute', 'Coal hole', 'A square of street. Once a loop something looks in.'],
+  ['attic', 'Under the roof', 'Rafters to the gable, the moon on the boards, small feet in the dust.'],
+  ['trunk', 'Cabin trunk', 'A child’s things. A red coat, wet.'],
+  ['form', 'Dressmaker’s form', 'Under a sheet. No head. Its shadow has one.'],
+  ['cradle', 'Cradle', 'Set going.'],
+  ['stubble', 'The big field', 'Cut. Poles with no wire. One light where there is no house.'],
+  ['post', 'The post', 'The scarecrow has got down. Its coat is laid out.'],
+  ['ring', 'Ring', 'Trodden in the stubble. A shoe in the middle.'],
+  ['fdoor', 'The door, again', 'In the field now, from behind. Not quite shut.'],
+  ['hatch', 'Hatch', 'Both leaves back, steps down, lit. Shoes at the top.'],
+  ['halt', 'Works halt', 'One lamp, a painted-out board, a van with its door run back.'],
+  ['signal', 'Signal', 'Nothing due for forty years. The arm comes off.'],
+  ['timeclock', 'Time clock', 'Every card is yours. Tonight’s is punched.'],
+];
+const FRESH = new Set([...NEWS.map((x) => x[0]), 'gate', 'floor', 'office', 'wellshaft', 'basement', 'adit', 'field', 'attic', 'gallery', 'door', 'halt', 'shift']);
 const SCENES = [
+  ...NEWS,
   ['stop', 'The shelter', 'On the quarry road. A timetable with one time on it, foxgloves through the tarmac.'], ['phone', 'Call box', 'Off its hook long enough for ivy. Still swinging.'],
   ['ashtray', 'Ashtray', 'One cigarette, still lit. A matchbook with the lamp sign.'], ['booth', 'Ticket booth', 'Lit and empty. A ticket already through the slot.'],
   ['cinema', 'The picture house', 'From the back row. A coat on every seat. A staircase on the screen.'], ['reel', 'Projector', 'Running. No film on it.'],
@@ -311,10 +347,10 @@ const SCENES = [
   ['cat', 'The cat', 'Emerald eyes, slit pupils, a slow blink.'], ['pumpkins', 'Pumpkins, again', 'Out too long. Not pleased.'],
 ];
 const GROUPS = [
-  { id: 'Page', h: 'Pages', cls: 'pages', p: 'Portrait, 360 by 480, in the order the night runs. Read the text under each and then look for what it left out.',
-    cards: Object.entries(PAGES).map(([k, pg]) => ({ k: `${k} (${pg.kind})`, t: pg.kind, page: k })) },
-  { id: 'Plate', h: 'New plates', p: 'Twenty-one new this round, first. Then the ones from before, with the prints and the stained room redone. Drop the ones that miss.',
-    cards: SCENES.map(([s, t, d]) => ({ k: t, t, d, spec: { s } })) },
+  { id: 'Page', h: 'Pages', cls: 'pages', p: 'Portrait, 360 by 480, in the order the night runs, numbered as the site numbers them. Twelve are new this round and marked. Read the text under each and then look for what it left out.',
+    cards: Object.entries(PAGES).map(([k, pg], i) => ({ k: `${k} (${pg.kind})`, t: `${String(i + 1).padStart(2, '0')} · ${k} · ${pg.kind}`, page: k, fresh: FRESH.has(k) })) },
+  { id: 'Plate', h: 'New plates', p: 'Thirty-two new this round, first, marked new: the works, the level under it, Dunn’s basement, the Harrow attic, the field and the halt. Then the ones from before. Drop the ones that miss.',
+    cards: SCENES.map(([s, t, d]) => ({ k: t, t, d, spec: { s }, fresh: FRESH.has(s) })) },
   { id: 'Line', h: 'More words for the pictures', p: 'You kept all eight last round. These lean toward the sign and the machines.', wide: true,
     cards: [['do not wave back', 0], ['someone is owed', 0], ['be kind, rewind', 0], ['the clock has never been set', 0], ['nine strikes gone', 0], ['you are still watching', 1], ['they repainted it this week', 0], ['say it in her voice', 1]]
       .map(([t, hot]) => ({ k: t, t: hot ? 'Visceral' : 'Desolate', line: t, hot })) },
@@ -333,7 +369,7 @@ const DEVICES = [
   ['Map as hub', 'A town map page you return to, redrawn by what you have done.'],
 ];
 // --- picks ---
-const LS = 'darkforest-picks-4';
+const LS = 'cryptomnesia-picks-6';
 let state = { drop: {} };
 try { state = { ...state, ...JSON.parse(localStorage.getItem(LS) || '{}') }; } catch {}
 const $ = (q, el = document) => el.querySelector(q), $$ = (q, el = document) => [...el.querySelectorAll(q)];
@@ -358,15 +394,15 @@ if (!matchMedia('(prefers-reduced-motion: reduce)').matches) setInterval(() => {
 // --- markup ---
 const cv = (spec) => `<canvas data-spec='${JSON.stringify(spec)}'></canvas>`;
 const pageMock = (k) => `<div class="page">${cv({ page: k })}<div class="text"><span>${PAGES[k].cap}</span><ol>${PAGES[k].ch.map(([x]) => `<li>${x}</li>`).join('')}</ol></div></div>`;
-const card = (g, c) => `<article class="card" data-pick="${esc(`${g.id}:${c.k}`)}">${c.page ? pageMock(c.page) : c.line ? `<div class="line${c.hot ? ' hot' : ''}">${c.line}</div>` : cv(c.spec)}<h3>${c.t}</h3>${c.d ? `<p>${c.d}</p>` : ''}</article>`;
+const card = (g, c) => `<article class="card" data-pick="${esc(`${g.id}:${c.k}`)}">${c.page ? pageMock(c.page) : c.line ? `<div class="line${c.hot ? ' hot' : ''}">${c.line}</div>` : cv(c.spec)}<h3>${c.t}${c.fresh ? ' <span class="rec label">· new</span>' : ''}</h3>${c.d ? `<p>${c.d}</p>` : ''}</article>`;
 $('#groups').innerHTML = GROUPS.map((g) => `<section><span class="label">${g.id}</span><h2>${g.h}</h2><p class="lede">${g.p}</p><div class="grid ${g.cls || (g.wide ? 'wide' : '')}">${g.cards.map((c) => card(g, c)).join('')}</div></section>`).join('');
 $('#devices').innerHTML = DEVICES.map(([t, d]) => `<article class="card" data-pick="Device:${esc(t)}"><h3>${t}</h3><p>${d}</p></article>`).join('');
-$('#entries').innerHTML = Object.values(ENTRIES).map((e) => `<article class="card" data-pick="Entry:${e.name}"><h3>${e.name}</h3><p>${e.where}</p><p>${e.bend}</p></article>`).join('');
+$('#entries').innerHTML = Object.entries(ENTRIES).map(([k, e]) => `<article class="card" data-pick="Entry:${e.name}">${cv({ s: k })}<h3>${e.name} <span class="rec label">· new</span></h3><p>${e.where}</p><p>${e.bend}</p></article>`).join('');
 $('#quiz').innerHTML = QUIZ.map((q, i) => `<div>${cv(q.scene)}<p class="q">${q.q}</p>${q.a.map(([t, k]) => `<button type="button" data-q="${i}" data-k="${k}" aria-pressed="false">${t}</button>`).join('')}</div>`).join('');
 $('#hero').innerHTML = pageMock('harrow');
 {
   const w = walks(), n = w.map((p) => p.length - 1), bad = w.filter((p) => repeats(p).length).length, ends = Object.keys(PAGES).filter((k) => PAGES[k].end);
-  $('#walks').textContent = `${Object.keys(PAGES).length} pages, ${ends.length} ends, ${w.length} different walks from the four ways in. Shortest ${Math.min(...n)} choices, longest ${Math.max(...n)}. Walks that show a picture twice without it being a return: ${bad}.`;
+  $('#walks').textContent = `${Object.keys(PAGES).length} pages, ${ends.length} ends, ${w.length} different walks from the five ways in. Shortest ${Math.min(...n)} choices, longest ${Math.max(...n)}. Walks that show a picture twice without it being a return: ${bad}.`;
   $('#matrix').innerHTML = Object.entries(PAGES).filter(([, pg]) => !pg.end).map(([k, pg]) => `<article class="card" data-pick="Path:${k}"><h3>${k}</h3><p>${pg.cap}</p>${pg.ch.map(([t, to, lead]) => `<p><b>&gt; ${t}</b> → ${to}<br><em>${lead}</em></p>`).join('')}</article>`).join('');
 }
 
@@ -378,7 +414,7 @@ for (const el of $$('[data-pick]')) {
 function summary() {
   const by = {};
   for (const el of $$('[data-pick]')) { const [g, k] = el.dataset.pick.split(/:(.*)/); ((by[g] ||= { keep: [], drop: [] })[state.drop[el.dataset.pick] ? 'drop' : 'keep']).push(k); }
-  return 'DARKFOREST PICKS, ROUND 4\n' + Object.entries(by).map(([g, v]) => `${g} · keep: ${v.keep.join(', ') || 'none'}${v.drop.length ? ` · drop: ${v.drop.join(', ')}` : ''}`).join('\n');
+  return 'CRYPTOMNESIA PICKS, ROUND 6\n' + Object.entries(by).map(([g, v]) => `${g} · keep: ${v.keep.join(', ') || 'none'}${v.drop.length ? ` · drop: ${v.drop.join(', ')}` : ''}`).join('\n');
 }
 function paint() {
   let d = 0;
@@ -405,7 +441,7 @@ function save() {
 (async () => {
   const db = await window.claude?.use?.('db');
   if (!db) return;
-  remote = db.doc('picks/round5');
+  remote = db.doc('picks/round6');
   try { const snap = await remote.get(), d = snap.exists && snap.data(); if (d) { state = { drop: Object.fromEntries((d.drop || []).map((k) => [k, 1])) }; paint(); } } catch {}
 })();
 
@@ -417,7 +453,7 @@ document.addEventListener('click', (e) => {
     for (const b of $$(`[data-q="${q.dataset.q}"]`)) b.setAttribute('aria-pressed', b === q);
     const got = $$('#quiz [aria-pressed=true]').map((b) => b.dataset.k), n = {};
     for (const g of got) n[g] = (n[g] || 0) + 1;
-    const top = Object.keys(n).sort((x, y) => n[y] - n[x] || got.lastIndexOf(y) - got.lastIndexOf(x))[0];
+    const top = new Set(got).size === 3 ? 'hand' : Object.keys(n).sort((x, y) => n[y] - n[x] || got.lastIndexOf(y) - got.lastIndexOf(x))[0];
     $('#quizout').textContent = got.length < 3 ? `${3 - got.length} to go.` : `You are ${ENTRIES[top].name}. ${ENTRIES[top].where}`;
   }
 });

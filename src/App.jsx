@@ -50,11 +50,11 @@ function Quiz({ onStart, from }) {
   const who = useMemo(() => {
     const n = {};
     for (const k of got) n[k] = (n[k] || 0) + 1;
+    if (new Set(got).size === 3) return 'hand';             // three answers that agree on nothing: nobody in particular
     return Object.keys(n).sort((a, b) => n[b] - n[a] || got.lastIndexOf(b) - got.lastIndexOf(a))[0];
   }, [got]);
-  const page = (q || qs[2]).scene, colors = useMemo(() => pal(page.panels[0].s), [page]);
+  const e = ENTRIES[who], page = q ? q.scene : e.pic, colors = useMemo(() => pal(page.panels[0].s), [page]);
   if (q) return <><p className="ask">who am i?</p><Scene key={got.length} small page={page} colors={colors} text={again && !got.length ? `${again}\n\n${q.q}` : q.q} items={q.a} onPick={([, k]) => setGot([...got, k])} /></>;
-  const e = ENTRIES[who];
   return <Scene key="who" small page={page} colors={colors} text={`You are ${e.name}. ${e.where} ${e.bend}`} items={[['Begin', e.start], ['Answer again', '']]} onPick={([, to]) => (to ? onStart(to) : (setQs(deal()), setGot([])))} />;
 }
 
