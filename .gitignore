@@ -1,0 +1,27 @@
+# deps, builds
+node_modules/
+dist/
+*.tsbuildinfo
+
+# secrets: keys never go in git
+.env
+.env.*
+!.env.example
+
+# foundry output, local chain records
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/deployments/localhost.json
+
+# reference video, not ours to publish
+creepy.mp4
+
+# pnpm is the package manager here
+package-lock.json
+
+# os, editors, logs
+.DS_Store
+*.log
+.vscode/
+.idea/

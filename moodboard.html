@@ -1,0 +1,437 @@
+<title>Cryptomnesia Moodboard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Grenze+Gotisch:wght@600&family=IBM+Plex+Mono:wght@400;500&family=MedievalSharp&family=Pirata+One&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+/* layout: one dark contact sheet. plates in a wrapping grid, prose in a single 64ch column, picks bar pinned to the bottom */
+:root {
+  color-scheme: dark;
+  --ground: #0b0f14; --panel: #121820; --rule: #232c37; --bone: #d3ccba; --dim: #8a8f95; --lamp: #ff7a1a; --blood: #e3202c;
+  --serif: "Spectral", Georgia, serif; --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --dot: "DotGothic16", "IBM Plex Mono", monospace; --black: "Grenze Gotisch", "DotGothic16", serif;
+}
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--bone); font: 17px/1.55 var(--serif); }
+.wrap { max-width: 1140px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 120px; }
+h1, h2, h3, p { margin: 0; }
+h1 { font: 600 clamp(56px, 11vw, 108px)/0.85 var(--black); }
+h2 { font: 400 28px/1.1 var(--dot); text-wrap: balance; }
+h3 { font: 600 19px/1.25 var(--serif); }
+a { color: var(--bone); text-underline-offset: 3px; }
+.label, .tabs button, .keep, .bar, .quiz button { font: 500 11px/1.3 var(--mono); letter-spacing: 0.09em; text-transform: uppercase; }
+.label { color: var(--dim); }
+.lede { color: var(--dim); max-width: 64ch; }
+canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; background: #000; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
+
+header { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); gap: 36px; align-items: end; padding-bottom: 28px; border-bottom: 1px solid var(--rule); }
+header .say { display: grid; gap: 16px; }
+.tabs { display: flex; gap: 8px; margin-top: 22px; flex-wrap: wrap; }
+.tabs button { background: none; border: 1px solid var(--rule); padding: 10px 16px; color: var(--dim); }
+.tabs button[aria-selected="true"] { border-color: var(--lamp); color: var(--lamp); }
+
+section { display: grid; gap: 18px; padding-block: 34px; border-bottom: 1px solid var(--rule); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(238px, 1fr)); gap: 18px; }
+.grid.wide { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.grid.pages { grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr)); gap: 30px 24px; }
+.card { display: grid; gap: 10px; align-content: start; min-width: 0; transition: opacity 0.2s; }
+.card.dropped { opacity: 0.28; }
+.card.dropped canvas { filter: grayscale(1); }
+.card p { font-size: 15px; line-height: 1.45; color: var(--dim); }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
+.keep { background: none; border: 1px solid var(--rule); padding: 7px 10px; color: var(--bone); }
+.keep[aria-pressed="false"] { color: var(--blood); border-color: var(--blood); }
+
+/* a game page: the plate, then what the text notices, then the choices */
+.page { background: var(--pg, #000); display: grid; }
+.page .text { padding: 12px 14px 14px; font: 16px/1.3 var(--dot); color: var(--bone); display: grid; gap: 8px; }
+.page ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; color: var(--pa, var(--lamp)); }
+.page ol li::before { content: "> "; }
+.page ol li:first-child::after, .page ol li:hover::after { content: " \2588"; animation: blink 1s steps(1) infinite; }
+.page ol:hover li:first-child:not(:hover)::after { content: none; }
+@keyframes blink { 50% { opacity: 0; } }
+.line { background: #07090c; padding: 22px 16px; font: 600 30px/1 var(--black); color: var(--bone); min-height: 104px; display: grid; align-items: center; }
+.line.hot { color: var(--blood); }
+
+.prose { max-width: 64ch; display: grid; gap: 14px; }
+.prose li { margin-bottom: 8px; }
+.prose ul { margin: 0; padding-left: 20px; }
+.spine { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0; border: 1px solid var(--rule); }
+.spine div { padding: 14px; border-right: 1px solid var(--rule); display: grid; gap: 6px; align-content: start; }
+.spine p { font-size: 15px; color: var(--dim); line-height: 1.4; }
+.spine b { font: 400 20px/1 var(--dot); color: var(--lamp); }
+.route { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 26px; padding-block: 26px; border-top: 1px solid var(--rule); }
+.route .body { display: grid; gap: 12px; align-content: start; max-width: 66ch; }
+.route .hook { font: italic 400 21px/1.35 var(--serif); }
+.route dl, .facts { margin: 0; display: grid; grid-template-columns: 7.5em minmax(0, 1fr); gap: 6px 14px; font-size: 15.5px; line-height: 1.45; }
+.route dt, .facts dt { font: 500 11px/1.9 var(--mono); letter-spacing: 0.09em; text-transform: uppercase; color: var(--dim); }
+.route dd, .facts dd { margin: 0; }
+.rec { color: var(--lamp); }
+.quiz { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 22px; }
+.quiz > div { display: grid; gap: 10px; align-content: start; }
+.quiz .q { font: 16px/1.3 var(--dot); min-height: 3.9em; }
+.quiz button { text-align: left; background: none; border: 1px solid var(--rule); padding: 9px 10px; text-transform: none; letter-spacing: 0.02em; font-size: 12.5px; }
+.quiz button[aria-pressed="true"] { border-color: var(--lamp); color: var(--lamp); }
+#quizout { font: 16px/1.4 var(--dot); color: var(--lamp); min-height: 2.8em; }
+
+.bar { position: fixed; inset: auto 0 0 0; background: var(--panel); border-top: 1px solid var(--rule); padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 14px; align-items: center; justify-content: center; flex-wrap: wrap; z-index: 5; }
+.bar button { background: var(--lamp); color: #140a02; border: 0; padding: 9px 14px; font: inherit; }
+.bar output { color: var(--dim); }
+#picktext { width: 100%; max-width: 900px; height: 150px; background: var(--ground); color: var(--bone); border: 1px solid var(--rule); font: 12px/1.5 var(--mono); padding: 10px; }
+
+@media (max-width: 760px) { header, .route { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .page ol li::after { animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="say">
+      <span class="label">Choose-your-own horror · design board</span>
+      <h1>Cryptomnesia</h1>
+      <p class="lede">The design board. The game itself now runs as an app from the same engine and page recipes; this page stays as the place to react to art and words. Latest: wheels turned with the truck, warm headlamps, a moonlit truck on the turnout, the first sign back on the lawn, a cursor on the choices.</p>
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-art" aria-controls="p-art">Art</button>
+        <button role="tab" id="tab-story" aria-controls="p-story">Story</button>
+        <button role="tab" id="tab-build" aria-controls="p-build">Build</button>
+      </div>
+    </div>
+    <div id="hero"></div>
+  </header>
+
+  <main id="p-art" role="tabpanel" aria-labelledby="tab-art"><div id="groups"></div></main>
+
+  <main id="p-story" role="tabpanel" aria-labelledby="tab-story" hidden>
+    <section>
+      <span class="label">The way in</span>
+      <h2>Three questions pick where you start</h2>
+      <p class="lede">Answer them to try it. Each disposition opens on a different page and bends the story a little.</p>
+      <div class="quiz" id="quiz"></div>
+      <p id="quizout" aria-live="polite"></p>
+      <div class="grid" id="entries"></div>
+    </section>
+
+    <section>
+      <span class="label">Proposed shape, about 60 pages</span>
+      <h2>Branch, meet, narrow, fan out</h2>
+      <div class="spine">
+        <div><b>Dusk · 8</b><p>Arrive from one of four entry pages. Two small choices that set flags and are echoed later. No deaths yet.</p></div>
+        <div><b>Night · 30</b><p>Four districts, room to see three. Each sets one flag. Deaths here are short, warned, and worth finding.</p></div>
+        <div><b>Small hours · 10</b><p>Everyone passes through the same scenes, altered by flags. Choices drop from three to two to one.</p></div>
+        <div><b>Endings · 6 + 1</b><p>Mixed outcomes built from flags, not win or lose. One hidden ending that no choice links to.</p></div>
+      </div>
+      <div class="prose">
+        <p><b>Panel rhythm.</b> First pages and endings get one or two panels, so they land hard. Everything between gets three to eight. The text on a page notices one thing per panel, so a busier page reads slower and closer. The five and six panel pages are where the worst things are, usually in the smallest box.</p>
+        <p class="lede">About six more pages go to deaths. This is Ashwell's <a href="https://heterogenoustasks.wordpress.com/2015/01/26/standard-patterns-in-choice-based-games/">branch-and-bottleneck</a> with a late fan-out. Three or four flags carry the memory.</p>
+      </div>
+    </section>
+
+    <section>
+      <span class="label">House rules for the telling</span>
+      <h2>What the pictures do that the words don't</h2>
+      <div class="prose">
+        <ul>
+          <li><b>Silent panels.</b> On most pages one or two panels are never mentioned. The house, the car, the kitchen you walked through. They set the place. The text talks about the porch, the yard, the window.</li>
+          <li><b>No picture twice.</b> A detail gets one panel. If something crosses the floor it is a strip along the foot of the page, wherever the text is looking.</li>
+          <li><b>Mostly stills.</b> Two or three panels on a page move. The rest hold still, which makes the moving ones worse.</li>
+          <li><b>Three signs.</b> They recur, hand-drawn and never quite the same: painted on a barn, cut into a lawn, chalked in a loft, on a card, on a screen for one frame. Nobody explains them. People in town act as if you already know.</li>
+          <li><b>Type follows the track.</b> Grenze Gotisch for the Watcher and Keeper tracks, MedievalSharp for the Knocker and Stray, and Pirata One on a rare page where the town itself is speaking.</li>
+          <li><b>Old machines.</b> A set left on, a recorder whose clock was never set, a tape with your handwriting on it. They are things you can operate: "Hit play on the VCR" is a choice.</li>
+          <li><b>Every ending is dark.</b> No rescue, no waking up. The best ones take something the reader was sure of and turn it over: you were never the visitor, the tape is ahead of you, the voice is borrowed.</li>
+          <li><b>Endings are vignettes.</b> They sink into black. The exception is a violent death, which gets a hard box so there is nowhere to look away to.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <span class="label">The matrix</span>
+      <h2>Every choice, where it lands, and why it lands there</h2>
+      <p class="lede" id="walks"></p>
+      <p class="lede">Under each choice is the line the next page opens with. It is told before the page’s own words, so an arrival always follows from the choice that made it. Drop any hand-off that still jars.</p>
+      <div class="grid wide" id="matrix"></div>
+    </section>
+
+    <section>
+      <span class="label">Four routes · all four still in</span>
+      <h2>Storylines</h2>
+      <div id="routes">
+        <article class="route card" data-pick="Story:Nine Lamps">
+          <canvas data-spec='{"s":"lamp"}'></canvas>
+          <div class="body">
+            <div class="row"><h3>Nine Lamps <span class="rec label">· my pick</span></h3></div>
+            <p class="hook">You are the new lamplighter of Dunmarrow. There is oil for six lamps. There are nine streets.</p>
+            <dl>
+              <dt>Premise</dt><dd>A street left dark is gone by morning: its houses, its people, and everyone's memory of them. Each of three nights you choose the round.</dd>
+              <dt>Why it fits</dt><dd>The orange splash is the mechanic. A lit page has its accent. A forgotten street's page has none. Then a wrong-coloured window appears on a street you let go two nights ago.</dd>
+              <dt>Memory</dt><dd>Nine lamp flags. People you met vanish from later pages and from the captions. The map page redraws around your choices.</dd>
+              <dt>Endings</dt><dd>Dawn for six. The long dark. The keeper. The wrong street. Hidden: a tenth lamp that shows for one frame on the map page.</dd>
+              <dt>First page</dt><dd><em>The oil can is lighter than they said it would be. Marrow Street is first on the round. Someone is already standing under the lamp.</em> Light it · Walk on to Tanner's Row · Ask who's there</dd>
+            </dl>
+          </div>
+        </article>
+        <article class="route card" data-pick="Story:Low Water">
+          <canvas data-spec='{"s":"shore"}'></canvas>
+          <div class="body">
+            <h3>Low Water</h3>
+            <p class="hook">Once a year the tide at Sallow Quay goes out too far. Tonight it shows the roofs.</p>
+            <dl>
+              <dt>Premise</dt><dd>Under the harbour is an older town, street for street the same as the one above, including your house with a light on. You have twelve moves before the tide turns.</dd>
+              <dt>Why it fits</dt><dd>Every upper-town page has a drowned twin: same panels, different palette, wrong accent. Readers compare the pair to find what changed.</dd>
+              <dt>Memory</dt><dd>A visible tide clock, and three things you can carry up or leave below.</dd>
+              <dt>Endings</dt><dd>Caught by the tide. Home, but it's the copy. The bell brought up. Staying below. Hidden: never go down.</dd>
+              <dt>First page</dt><dd><em>The boat is where the water was. Beyond it, wet slate, a chimney, a weathervane you know.</em> Walk out · Fetch your brother first · Watch from the wall</dd>
+            </dl>
+          </div>
+        </article>
+        <article class="route card" data-pick="Story:Two Hundred and Twelve">
+          <canvas data-spec='{"s":"kitchen"}'></canvas>
+          <div class="body">
+            <h3>Two Hundred and Twelve</h3>
+            <p class="hook">You are sent to count the people of Wick St Agnes. The last census says 212. Every house has one more than it should.</p>
+            <dl>
+              <dt>Premise</dt><dd>Door to door, kitchen to kitchen. At each table sits someone the family insists has always been there. A name struck in red is gone on the next page.</dd>
+              <dt>Why it fits</dt><dd>Bone interiors, and the red is your ink. Multi-panel pages suit it: one box per face at the table, and one of them never moves.</dd>
+              <dt>Memory</dt><dd>One number, the count.</dd>
+              <dt>Endings</dt><dd>By final count. 212 exactly. Under. Over. 213, where the last line is you. Hidden: zero.</dd>
+              <dt>First page</dt><dd><em>Mrs Pell sets out five cups. The form says four. Nobody at the table looks at the fifth chair.</em> Write four · Write five · Ask the child to name everyone</dd>
+            </dl>
+          </div>
+        </article>
+        <article class="route card" data-pick="Story:The Sitting">
+          <canvas data-spec='{"s":"cellar"}'></canvas>
+          <div class="body">
+            <h3>The Sitting</h3>
+            <p class="hook">Your grandmother is laid out in the front room. Someone must sit with her until first light. The rules are pinned to the door.</p>
+            <dl>
+              <dt>Premise</dt><dd>Seven rules. Each hour a relative goes home and one rule is tested. One of the seven was not written by the family.</dd>
+              <dt>Why it fits</dt><dd>Smallest to build: one house, and each window is a panel showing the town or the woods in its own palette.</dd>
+              <dt>Memory</dt><dd>Which rules you've kept. Breaking one is always warned and not always fatal.</dd>
+              <dt>Endings</dt><dd>One for each broken rule. First light. Hidden: keep all seven, including the false one.</dd>
+              <dt>First page</dt><dd><em>Aunt Ro puts her coat on. "You'll be fine. Just do what the paper says." The paper has seven lines in two different hands.</em> Read the rules · Count the chairs · Ask whose writing that is</dd>
+            </dl>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <span class="label">Mechanics · these work with any route</span>
+      <h2>Devices</h2>
+      <div class="grid wide" id="devices"></div>
+    </section>
+  </main>
+
+  <main id="p-build" role="tabpanel" aria-labelledby="tab-build" hidden>
+    <section>
+      <span class="label">Nothing here is built yet</span>
+      <h2>How I'd build it, and what I need from you</h2>
+      <p class="lede">Each card is a decision. Keep the option you want in each group and drop the others.</p>
+    </section>
+    <section>
+      <span class="label">Framework</span>
+      <div class="grid wide">
+        <article class="card" data-pick="Framework:Vite + React"><h3>Vite + React <span class="rec label">· my pick</span></h3><p>The whole game runs in the browser: the art engine, the story state, the wallet. A static build needs no server and can be pinned to IPFS, which suits a fully on-chain piece.</p></article>
+        <article class="card" data-pick="Framework:Next.js"><h3>Next.js</h3><p>Worth it only if you want each page to have its own link preview image, which needs a server to render. Otherwise it adds hosting you don't need.</p></article>
+      </div>
+    </section>
+    <section>
+      <span class="label">Format, measured on the first eleven pages</span>
+      <h2>APNG, with a plain PNG inside it</h2>
+      <div class="prose">
+        <p>A page uses four colours, so it packs as a 2-bit indexed PNG. An APNG is that same PNG with extra frames attached for only the panels that move. Every current browser plays it. Anything that cannot play it still shows the first frame, because the file is a valid PNG. A GIF cannot do better here and is usually larger; I have not measured GIF.</p>
+        <dl class="facts">
+          <dt>Still page</dt><dd>Mean 4.7 KB.</dd>
+          <dt>Animated page</dt><dd>Mean 17.9 KB. This is an upper bound: it stores every frame of each moving panel whole, with no frame-to-frame differencing.</dd>
+          <dt>Sixty pages</dt><dd>About 1.1 MB animated, or 280 KB as stills, if the rest of the book averages like these eleven.</dd>
+          <dt>Not yet tested</dt><dd>Whether the marketplaces and wallets you care about animate APNG or show only the first frame. Words set into the art are not in these figures; they add little.</dd>
+        </dl>
+      </div>
+    </section>
+    <section>
+      <span class="label">Putting the art on-chain</span>
+      <div class="grid wide">
+        <article class="card" data-pick="On-chain:APNG files on-chain"><h3>Store each page as an APNG <span class="rec label">· my pick on an L2</span></h3><p>What is minted is the picture itself. Nothing has to run for it to display, and the thumbnail problem from last round goes away. About 1 MB for the book, which at 200 gas per byte is roughly 200 million gas: fine on an L2, very heavy on mainnet.</p></article>
+        <article class="card" data-pick="On-chain:Renderer on-chain"><h3>Store the renderer and recipes <span class="rec label">· my pick on mainnet</span></h3><p>The engine goes in the contract once (about 70 KB of source today) and each page is a recipe of under 1 KB. Roughly a tenth of the bytes. The token draws itself as a live HTML document, with a still PNG stored alongside for thumbnails. New art means the stored engine can never change, so the engine has to be finished first.</p></article>
+      </div>
+    </section>
+    <section>
+      <span class="label">Chain</span>
+      <div class="grid wide">
+        <article class="card" data-pick="Chain:Ethereum mainnet"><h3>Ethereum mainnet</h3><p>The most durable home and the one collectors rank highest. Storing code costs 200 gas per byte, so the engine and sixty recipes is a real deployment bill.</p></article>
+        <article class="card" data-pick="Chain:An L2 such as Base"><h3>An L2 such as Base</h3><p>Same contract, far cheaper to deploy and to mint. A 0.003 ETH mint is not eaten by fees.</p></article>
+      </div>
+    </section>
+    <section>
+      <span class="label">Wallets and minting</span>
+      <dl class="facts prose">
+        <dt>Token</dt><dd>I'm reading "erc-1115" as ERC-1155. One token id per page, 0.003 ETH, minted from a button on the page you are reading. Pages are 360 by 480.</dd>
+        <dt>No keys</dt><dd>wagmi and viem with browser-wallet discovery (MetaMask, Rabby, Rainbow and others) and Coinbase Wallet need no API key. Chain reads go through public RPC endpoints, which are rate-limited.</dd>
+        <dt>WalletConnect</dt><dd>It cannot run without a project ID from Reown. The ID is free and public, but it is a keyed service. I'd wire it so it switches on only if you supply an ID, and the site works without it.</dd>
+        <dt>To decide</dt><dd>Can anyone mint any page, or only pages they have reached? Is each page's edition open forever, capped, or timed? Where do proceeds go?</dd>
+      </dl>
+    </section>
+  </main>
+</div>
+
+<div class="bar">
+  <output id="count"></output>
+  <button id="copy" type="button">Copy picks</button>
+  <output id="saved"></output>
+  <textarea id="picktext" hidden readonly aria-label="Your picks as text"></textarea>
+</div>
+
+<script src="src/engine.js"></script>
+<script src="src/pages.js"></script>
+<script>
+const { PAGES, QUIZ, ENTRIES, PW, PH, pal, walks, repeats } = DFDATA;
+const SCENES = [
+  ['stop', 'The shelter', 'On the quarry road. A timetable with one time on it, foxgloves through the tarmac.'], ['phone', 'Call box', 'Off its hook long enough for ivy. Still swinging.'],
+  ['ashtray', 'Ashtray', 'One cigarette, still lit. A matchbook with the lamp sign.'], ['booth', 'Ticket booth', 'Lit and empty. A ticket already through the slot.'],
+  ['cinema', 'The picture house', 'From the back row. A coat on every seat. A staircase on the screen.'], ['reel', 'Projector', 'Running. No film on it.'],
+  ['reeds', 'Cattails', 'The creek from the bank, a boat nobody has bailed, something long under the surface.'], ['willow', 'Willow bridge', 'The footbridge is mostly willow now. Something is tied to the rail.'],
+  ['pond', 'The pond', 'Through willow. Pads, rings where something went under. A reflection with nobody to cast it.'], ['oak', 'The old oak', 'A hollow you could stand in. Bottles on strings from the bough.'], ['grove', 'The avenue', 'Nobody planted it. A sign cut in the nearest trunk, a red cross the wrong way up at the far end.'],
+  ['mound', 'The yard', 'Soft ground the length of a person, a spade, a bag packed.'], ['drowned', 'In the water', 'The face is yours. Its hands are on the bank.'],
+  ['ferns', 'Fern ring', 'Mushrooms up in a ring under the ferns. One is lit.'], ['gorse', 'The head', 'The path up through gorse in flower to the foot of the light.'],
+  ['stairs', 'Stairs', 'From the foot. The door at the top is ajar.'], ['hall', 'Nine hooks', 'Eight keys. Once a loop the mirror has somebody in it.'],
+  ['radio', 'Wireless', 'Warm, between stations. The needle will not stay.'], ['armchair', 'The chair', 'Turned a little away. Red behind it, and fingers over the back.'],
+  ['mantel', 'Mantel', 'A stopped clock, every photograph turned to the wall but one.'], ['ceiling', 'Ceiling', 'The stain is where the bath is.'],
+  ['doors', 'It stops', 'The bus, doors open, nobody at the wheel.'], ['bus', 'Every seat', 'Inside. One seat empty. Once a loop every head has come round.'],
+  ['spiral', 'Inside the light', 'Looking up the stair.'], ['lens', 'Lamp room', 'It takes.'], ['rungs', 'The shaft', 'Looking up. Once a loop somebody is looking down.'],
+  ['turnout', 'The turnout', 'The truck on the bluff with the moon on its roof and wings.'],
+  ['clearing', 'The clearing', 'A truck left running with its lamps on a door. There is no house.'], ['birches', 'Birches', 'From low down. One of the eyes in the bark opens.'],
+  ['swing', 'Tyre swing', 'An oak limb over the creek. The tyre is still moving.'], ['treeline', 'From the fire tower', 'Forest to the horizon, one road, one light, smoke where nobody lives.'],
+  ['lighthouse', 'The light', 'From the rocks at its foot. The beam goes round.'], ['pier', 'The pier', 'Down its length to the lantern. Once a loop someone is under it.'],
+  ['wrack', 'Tideline', 'Three small prints in wet sand, going in. And the shoe.'], ['mainst', 'Main street', 'Shut. The signal still changes and the picture house has a show.'],
+  ['storefront', 'Dunn’s window', 'Three dummies under sheets. Watch the middle one.'], ['gas', 'The pumps', 'Dry for years. One globe is lit.'],
+  ['house', 'The house', 'Three-quarter view from the lane, with a pickup nobody has moved.'], ['porch', 'Porch', 'Looking down its length. The chair rocks.'],
+  ['yard', 'Back yard', 'From an upstairs window, looking down.'], ['window', 'Side window', 'Looking in. The set lights only what is near it. In one frame the chair is empty.'],
+  ['tv', 'The set', 'Standing on the recorder, fronts flush. Static, and once a loop, a sign.'], ['cassette', 'Tape machine', 'On a table, from above. Reels turn, the red light blinks.'],
+  ['cards', 'Three cards', 'Laid on a cloth. The middle one is not from the deck.'], ['sigil', 'Loft floor', 'Chalk, three candles, a shadow nothing casts.'],
+  ['barn', 'Barn', 'From the ground looking up. Still.'], ['road', 'The road in', '10 frames, seen from the verge. The night bus comes down out of the west and goes by.'],
+  ['well', 'The well', 'Straight down. The moon is in it.'], ['tree', 'Bottle elm', 'From near its foot. A vase of limbs that arch out and droop. One bottle is lit.'],
+  ['field', 'Field', 'Rows running to the one lit house. Watch the scarecrow.'], ['tub', 'The bath', 'For the worst endings only.'],
+  ['cat', 'The cat', 'Emerald eyes, slit pupils, a slow blink.'], ['pumpkins', 'Pumpkins, again', 'Out too long. Not pleased.'],
+];
+const GROUPS = [
+  { id: 'Page', h: 'Pages', cls: 'pages', p: 'Portrait, 360 by 480, in the order the night runs. Read the text under each and then look for what it left out.',
+    cards: Object.entries(PAGES).map(([k, pg]) => ({ k: `${k} (${pg.kind})`, t: pg.kind, page: k })) },
+  { id: 'Plate', h: 'New plates', p: 'Twenty-one new this round, first. Then the ones from before, with the prints and the stained room redone. Drop the ones that miss.',
+    cards: SCENES.map(([s, t, d]) => ({ k: t, t, d, spec: { s } })) },
+  { id: 'Line', h: 'More words for the pictures', p: 'You kept all eight last round. These lean toward the sign and the machines.', wide: true,
+    cards: [['do not wave back', 0], ['someone is owed', 0], ['be kind, rewind', 0], ['the clock has never been set', 0], ['nine strikes gone', 0], ['you are still watching', 1], ['they repainted it this week', 0], ['say it in her voice', 1]]
+      .map(([t, hot]) => ({ k: t, t: hot ? 'Visceral' : 'Desolate', line: t, hot })) },
+];
+const DEVICES = [
+  ['The tell', 'One frame of the loop carries the warning. Watching before choosing is rewarded.'],
+  ['The cat knows', 'The cat is on most pages. It looks at the danger one page before you can see it. On a page with no cat, something is wrong.'],
+  ['Lit pumpkins', 'A lit pumpkin on a step means that house still remembers you. Count them as the nights go on.'],
+  ['Three signs', 'The lamp: a ring and staff, painted on barns and cut into trees. It marks what the town still remembers. The owed: a triangle with an eye and three drops, on lawns and cards. Someone here has a debt. The door: a broken ring and a ladder, chalked indoors and on screens. Something was asked in. Nobody explains them, and none is ever drawn the same way twice.'],
+  ['Machines you can work', 'Play, stop, rewind, change the channel. Some choices are buttons.'],
+  ['The town forgets', 'Flags rewrite earlier places: a panel goes missing from a page, and the text stops mentioning it.'],
+  ['Choices thin out', 'Three options at dusk, two at midnight, one near the end.'],
+  ['Choices that lie', 'Late on, an option is crossed out, or reworded between frames by something else.'],
+  ['The unlinked ending', 'One ending no choice leads to. Found by noticing, not by choosing.'],
+  ['Deaths worth collecting', 'Every bad ending gets its own page and a tally of the ways you ended.'],
+  ['Map as hub', 'A town map page you return to, redrawn by what you have done.'],
+];
+// --- picks ---
+const LS = 'darkforest-picks-4';
+let state = { drop: {} };
+try { state = { ...state, ...JSON.parse(localStorage.getItem(LS) || '{}') }; } catch {}
+const $ = (q, el = document) => el.querySelector(q), $$ = (q, el = document) => [...el.querySelectorAll(q)];
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+// --- plates: the engine mounts each canvas and hands back a function that advances its moving panels ---
+const plates = [], queue = [];
+function build(p) {
+  const pg = p.spec.page && PAGES[p.spec.page], n = p.spec.n || 200, h = p.spec.h || n;
+  const page = pg ? { ...pg, w: PW, h: PH } : p.spec.panels ? p.spec : { w: n, h, panels: [{ x: 0, y: 0, w: n, h, c: [0.5, 0.5], z: 1, live: 1, ...p.spec }] };
+  const colors = pal(pg || page.panels[0].s);
+  p.step = DF.mount(p.cv, page, colors);
+  const el = p.cv.closest('.page'); if (el) { el.style.setProperty('--pg', colors[0]); el.style.setProperty('--pa', colors[2]); }
+}
+function pump() { const p = queue.shift(); if (!p) return; build(p); setTimeout(pump, 0); }
+function mountAll() {
+  for (const cv of $$('canvas[data-spec]')) { const p = { cv, spec: JSON.parse(cv.dataset.spec) }; cv.removeAttribute('data-spec'); plates.push(p); queue.push(p); }
+}
+let tick = 0;
+if (!matchMedia('(prefers-reduced-motion: reduce)').matches) setInterval(() => { tick++; for (const p of plates) p.step?.(tick); }, 220);
+
+// --- markup ---
+const cv = (spec) => `<canvas data-spec='${JSON.stringify(spec)}'></canvas>`;
+const pageMock = (k) => `<div class="page">${cv({ page: k })}<div class="text"><span>${PAGES[k].cap}</span><ol>${PAGES[k].ch.map(([x]) => `<li>${x}</li>`).join('')}</ol></div></div>`;
+const card = (g, c) => `<article class="card" data-pick="${esc(`${g.id}:${c.k}`)}">${c.page ? pageMock(c.page) : c.line ? `<div class="line${c.hot ? ' hot' : ''}">${c.line}</div>` : cv(c.spec)}<h3>${c.t}</h3>${c.d ? `<p>${c.d}</p>` : ''}</article>`;
+$('#groups').innerHTML = GROUPS.map((g) => `<section><span class="label">${g.id}</span><h2>${g.h}</h2><p class="lede">${g.p}</p><div class="grid ${g.cls || (g.wide ? 'wide' : '')}">${g.cards.map((c) => card(g, c)).join('')}</div></section>`).join('');
+$('#devices').innerHTML = DEVICES.map(([t, d]) => `<article class="card" data-pick="Device:${esc(t)}"><h3>${t}</h3><p>${d}</p></article>`).join('');
+$('#entries').innerHTML = Object.values(ENTRIES).map((e) => `<article class="card" data-pick="Entry:${e.name}"><h3>${e.name}</h3><p>${e.where}</p><p>${e.bend}</p></article>`).join('');
+$('#quiz').innerHTML = QUIZ.map((q, i) => `<div>${cv(q.scene)}<p class="q">${q.q}</p>${q.a.map(([t, k]) => `<button type="button" data-q="${i}" data-k="${k}" aria-pressed="false">${t}</button>`).join('')}</div>`).join('');
+$('#hero').innerHTML = pageMock('harrow');
+{
+  const w = walks(), n = w.map((p) => p.length - 1), bad = w.filter((p) => repeats(p).length).length, ends = Object.keys(PAGES).filter((k) => PAGES[k].end);
+  $('#walks').textContent = `${Object.keys(PAGES).length} pages, ${ends.length} ends, ${w.length} different walks from the four ways in. Shortest ${Math.min(...n)} choices, longest ${Math.max(...n)}. Walks that show a picture twice without it being a return: ${bad}.`;
+  $('#matrix').innerHTML = Object.entries(PAGES).filter(([, pg]) => !pg.end).map(([k, pg]) => `<article class="card" data-pick="Path:${k}"><h3>${k}</h3><p>${pg.cap}</p>${pg.ch.map(([t, to, lead]) => `<p><b>&gt; ${t}</b> → ${to}<br><em>${lead}</em></p>`).join('')}</article>`).join('');
+}
+
+for (const el of $$('[data-pick]')) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'keep toggle';
+  ($('.body', el) || el).append(b);
+}
+function summary() {
+  const by = {};
+  for (const el of $$('[data-pick]')) { const [g, k] = el.dataset.pick.split(/:(.*)/); ((by[g] ||= { keep: [], drop: [] })[state.drop[el.dataset.pick] ? 'drop' : 'keep']).push(k); }
+  return 'DARKFOREST PICKS, ROUND 4\n' + Object.entries(by).map(([g, v]) => `${g} · keep: ${v.keep.join(', ') || 'none'}${v.drop.length ? ` · drop: ${v.drop.join(', ')}` : ''}`).join('\n');
+}
+function paint() {
+  let d = 0;
+  for (const el of $$('[data-pick]')) {
+    const off = !!state.drop[el.dataset.pick]; d += off;
+    el.classList.toggle('dropped', off);
+    const b = $('.toggle', el); b.setAttribute('aria-pressed', !off); b.textContent = off ? 'Dropped · restore' : 'Keeping · drop';
+  }
+  $('#count').textContent = `${$$('[data-pick]').length - d} kept · ${d} dropped`;
+  if (!$('#picktext').hidden) $('#picktext').value = summary();
+}
+
+// --- saving: this browser always, and the artifact's shared store when it is available ---
+let remote = null, timer;
+function save() {
+  try { localStorage.setItem(LS, JSON.stringify(state)); } catch {}
+  clearTimeout(timer);
+  timer = setTimeout(async () => {
+    if (!remote) return;
+    try { await remote.set({ drop: Object.keys(state.drop), summary: summary(), at: new Date().toISOString() }); $('#saved').textContent = 'Saved'; }
+    catch { $('#saved').textContent = 'Saved in this browser only'; }
+  }, 700);
+}
+(async () => {
+  const db = await window.claude?.use?.('db');
+  if (!db) return;
+  remote = db.doc('picks/round5');
+  try { const snap = await remote.get(), d = snap.exists && snap.data(); if (d) { state = { drop: Object.fromEntries((d.drop || []).map((k) => [k, 1])) }; paint(); } } catch {}
+})();
+
+document.addEventListener('click', (e) => {
+  const k = e.target.closest('.toggle'), t = e.target.closest('[role=tab]'), q = e.target.closest('[data-q]');
+  if (k) { const id = k.closest('[data-pick]').dataset.pick; state.drop[id] ? delete state.drop[id] : (state.drop[id] = 1); paint(); save(); }
+  if (t) show(t.getAttribute('aria-controls').slice(2), true);
+  if (q) {
+    for (const b of $$(`[data-q="${q.dataset.q}"]`)) b.setAttribute('aria-pressed', b === q);
+    const got = $$('#quiz [aria-pressed=true]').map((b) => b.dataset.k), n = {};
+    for (const g of got) n[g] = (n[g] || 0) + 1;
+    const top = Object.keys(n).sort((x, y) => n[y] - n[x] || got.lastIndexOf(y) - got.lastIndexOf(x))[0];
+    $('#quizout').textContent = got.length < 3 ? `${3 - got.length} to go.` : `You are ${ENTRIES[top].name}. ${ENTRIES[top].where}`;
+  }
+});
+$('#copy').addEventListener('click', async () => {
+  const ta = $('#picktext'); ta.hidden = false; ta.value = summary();
+  try { await navigator.clipboard.writeText(ta.value); $('#saved').textContent = 'Copied'; } catch { ta.select(); $('#saved').textContent = 'Select and copy the text'; }
+});
+function show(id, push) {
+  for (const m of $$('main')) m.hidden = m.id !== 'p-' + id;
+  for (const t of $$('[role=tab]')) t.setAttribute('aria-selected', t.getAttribute('aria-controls') === 'p-' + id);
+  if (push) { try { history.replaceState(null, '', '#' + id); } catch {} scrollTo(0, 0); }
+}
+show(['story', 'build'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'art');
+mountAll(); paint();
+// in-plate words need their fonts before the first rasterise
+DF.fontsReady().then(pump);
+</script>

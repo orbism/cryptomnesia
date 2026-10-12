@@ -1,0 +1,52 @@
+/* a late-eighties terminal: the plate on the left, the telling and a menu on the right, everything in the page's own colours */
+:root { color-scheme: dark; --ground: #0d1218; --ink: #5c6c7e; --accent: #ff7a1a; --bone: #d3ccba; }
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body { margin: 0; background: var(--ground); transition: background 0.6s; color: var(--bone); font: 18px/1.4 "DotGothic16", ui-monospace, Menlo, monospace; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+:focus-visible { outline: 1px solid var(--bone); outline-offset: 3px; }
+
+header { display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; padding: 10px 20px; color: #7d858d; }
+header h1 { margin: 0; font: 600 30px/1 "Grenze Gotisch", serif; color: var(--bone); }
+header button, header nav a, .note button { transition: color 0.5s ease; }
+header button:hover, .note button:hover { color: #ff2a2a; }
+header nav { position: relative; display: flex; gap: 14px; align-items: center; margin: 0 auto 0 18px; }
+header nav a, header nav .soon { display: grid; color: inherit; }
+header nav a:hover { color: #ff2a2a; }
+header nav .soon { opacity: 0.35; }
+/* what this is, let down under the title. it sits on the page's own ground so nothing shows through */
+.about { position: absolute; z-index: 2; top: calc(100% + 12px); left: 0; width: min(46ch, calc(100vw - 40px)); padding: 4px 18px; background: var(--ground); border: 1px solid var(--ink); color: var(--bone); font-size: 15px; }
+.about .entry { color: #dcb88a; }
+.about b { font-weight: normal; }
+.seen, .folio { position: fixed; left: 20px; bottom: 12px; color: #7d858d; font-size: 14px; }
+.folio { left: auto; right: 20px; }
+.about .entry b { font: 600 20px/1 "Grenze Gotisch", serif; }
+.wallets { display: flex; gap: 14px; flex-wrap: wrap; }
+
+.scene { display: grid; grid-template-columns: auto minmax(0, 34ch); gap: 28px; justify-content: center; align-items: center; min-height: calc(100% - 56px); padding: 12px 20px 28px; }
+/* as tall as the window allows, never wider than its column; --ar is the plate's width over its height */
+.plate { display: block; image-rendering: pixelated; width: min(60vw, calc((100vh - 110px) * var(--ar))); height: auto; }
+/* the pictures beside the opening questions are small windows, and the pair sits in the middle of the page */
+.plate.small { width: min(320px, 42vw); }
+.words { display: grid; gap: 18px; align-content: center; min-height: 14em; }
+.telling { margin: 0; white-space: pre-line; }
+/* the option under the cursor changes colour and nothing else: the mark and the block take no room, so no line ever re-wraps */
+.choices { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; color: #b3122e; }
+.choices li { display: flex; }
+.choices li::before { content: ">"; flex: none; width: 2ch; visibility: hidden; }
+.choices li.on { color: #ff2a2a; }
+.choices li.on::before { visibility: visible; }
+.choices li.on button::after { content: "\2588"; position: absolute; margin-left: 0.4ch; animation: blink 1s steps(1) infinite; }
+/* over the opening questions, until they have been answered */
+.ask { position: absolute; margin: 0; left: 20px; top: 62px; color: #7d858d; }
+.ask::after { content: "\2588"; margin-left: 0.4ch; animation: blink 1s steps(1) infinite; }
+.note { margin: 0; color: var(--ink); font-size: 14px; }
+.note button { color: var(--accent); }
+@keyframes blink { 50% { opacity: 0; } }
+
+@media (max-width: 820px) {
+  .scene { grid-template-columns: minmax(0, 1fr); align-items: start; }
+  .plate { width: 100%; height: auto; }
+  .plate.small { width: min(320px, 70vw); margin: 0 auto; }
+}
+@media (prefers-reduced-motion: reduce) { .choices li.on button::after { animation: none; } }
