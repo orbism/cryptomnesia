@@ -26,7 +26,7 @@
   // ch: the choices, each [what it says, the page it leads to, what happens on the way]. the third part is told first on the next page, so every arrival follows from the choice that made it. 'start' goes back to the questions
   // back: a page that returns to an earlier one and may show its pictures again
   // text: t, f (j = the page's display face, d = DotGothic16), z = px, x (omit to centre), y, k = colour slot (1 ink, 2 accent, 3 second accent)
-  // The book runs in rows: dusk (where the five dispositions start), then four more, each one lamp darker. A choice always leads one row on, so no walk repeats a page and none is shorter than four choices or longer than seven. The ends hang off the last two rows.
+  // The book runs in rows: dusk (where the five dispositions start), then four more, each one lamp darker. A choice leads one row on, so no straight walk repeats a page and none is shorter than four choices or longer than seven. The exceptions are the five roads round, further down, which lead back to dusk. The ends hang off the last two rows.
   const PAGES = {
     // --- dusk. nine lit
     lane: { face: 'm', world: 'lamp', cap: 'The night bus comes down the quarry road at the same minute it always has. You feel it before you hear it, a low note in your back teeth. Every seat is taken. Nobody you ask has ever seen it stop. Nobody you ask likes being asked.',
@@ -43,8 +43,8 @@
         P(0, 246, 172, 198, 'yard', 0.5, 0.5, 0.86, 'vig'), P(180, 246, 180, 198, 'window', 0.5, 0.5, 0.9, 'fizz', { fade: [1, 1], live: 1, st: 'xim' })],
       text: [{ t: 'do not wave back', f: 'j', z: 24, y: 452, k: 2 }] },
     quay: { face: 'g', world: 'shore', acc2: '#2e9d6a', cap: 'The quay at slack water, when the sea holds its breath. You find you are holding yours. Somebody has drawn the well cover back, and the rim is wet with handprints, all of them going in. There are bottles in the elm again, which means someone is owed. The cat will not come down.',
-      ch: [['Look down the well', 'parlour', 'The rungs are greasy, and warmer than they should be. Your stomach goes down ahead of you. A passage, a stair, a trapdoor that opens under a kitchen table. The air that comes down when you lift it has already been breathed.'],
-        ['Take a bottle from the tree', 'picture', 'The glass is warm, like something held in a fist, and it fits your hand so well that you feel thanked. Inside is a ticket. ADMIT ONE, tonight’s date. Up on Main Street one building still has its lights on.'],
+      ch: [['Go in at the harbourmaster’s door', 'parlour', 'The door at the head of the quay is on the latch, and the latch is wet. There is no office behind it. There is a kitchen, somebody else’s, and the door you came in by is a back door now, with a yard behind its glass. The air in here has already been breathed.'],
+        ['Take a bottle from the tree', 'picture', 'The glass is warm, like something held in a fist, and it fits your hand so well that you feel thanked. Inside is a ticket. ADMIT ONE, tonight’s date. Up on Main Street one building still has its lights on. You take the ticket up to it.'],
         ['Follow what the cat is watching', 'creek', 'Something is moving the reeds from underneath, going inland against the water, about as long as a person lying down. You keep level with it. When you slow, it slows, and the hair on your arms lifts toward it.'],
         ['Climb down into the well', 'wellshaft', 'The rim is wet with handprints and you put your hands where they are. They fit. Your arms take your weight as if they had done this before. The moon in the water gets no nearer, and then you are below where the water ought to be.']],
       panels: [P(0, 0, 360, 230, 'shore', 0.5, 0.5, 1, 'vig', { live: 1 }), P(0, 238, 150, 190, 'well', 0.5, 0.5, 0.8, 'line', { live: 1, st: 'scan' }), P(158, 238, 100, 190, 'tree', 0.52, 0.5, 0.53, 'vig', { fall: 0.75, live: 1 }),
@@ -69,21 +69,21 @@
     // --- eight lit
     shelter: { face: 'm', world: 'lamp', cap: 'The shelter on the quarry road. The timetable has one time on it. The telephone has been off its hook long enough for ivy, and it is still swinging. On the bench a cigarette is burning, a third gone, the end of it wet. You can taste it. Down in the town, eight lamps.',
       ch: [['Put the receiver to your ear', 'deepwood', 'The earpiece is warm against your ear. It is your own voice, older and tired, asking you to go and see to the truck you left running past the birches. You have never owned a truck. Then it says your name the way only your mother did, and your knees go soft. You go.'],
-        ['Take the matchbook', 'stagnes', 'A matchbook from St Agnes Mission. Nine matches, none struck. Inside is a pencil map that starts at this bench, and a thumbprint in something that is not pencil, not yet dry. You put your own thumb to it. It fits.'],
+        ['Take the matchbook', 'stagnes', 'A matchbook from St Agnes Mission. Nine matches, none struck. Inside is a pencil map that starts at this bench, and a thumbprint in something that is not pencil, not yet dry. You put your own thumb to it. It fits. The map is short, and you are at the end of it before the print is dry.'],
         ['Read the timetable', 'strand', 'It is not a bus time. LOW WATER 11.40, and under it, in a child’s pencil: she will be at the end of the pier. Your mouth fills with the taste of salt. The road goes down to the sea and so do you.']],
       panels: [P(0, 0, 360, 210, 'stop', 0.5, 0.52, 1, 'vig', { live: 1 }), P(0, 218, 150, 200, 'phone', 0.5, 0.5, 0.75, 'line', { live: 1 }), P(158, 218, 202, 150, 'ashtray', 0.5, 0.62, 1, 'fizz', { fade: [1, 1], live: 1 })],
       text: [{ t: 'still lit', f: 'j', z: 36, x: 166, y: 376, k: 2 }, { t: 'it is for you.', f: 'd', z: 16, x: 8, y: 432, k: 1 }] },
     parlour: { face: 'm', world: 'kitchen', cap: 'A kitchen. Moonlight on the floor, a stain in it, still tacky, and a mark where something heavy was dragged to the far door. It dragged its heels. Your own heels ache, looking at it. A tape machine is recording. The label has your name on it, in your writing. The middle card is not from any deck.',
       ch: [['Go up the stairs', 'landing', 'You count thirteen stairs going up. Halfway, the banister is warm in one place, the size of a hand, and your hand rests there longer than you mean it to, as if it were being held. You will count twelve coming down, if you come down.'],
         ['Follow the drag mark', 'deepwood', 'It goes across a room you do not look at, where something turns its head to watch you not look. You feel the turn on the side of your face, like heat off an oven door. Then out, into the trees, and there are lights ahead.'],
-        ['Play the tape back', 'stagnes', 'A woman reads nine names. You know eight from the stones at St Agnes. She leaves a gap for the ninth, and in it somebody behind her is breathing fast, and you find you are breathing with them. A bell rings on the tape. It is also ringing outside.']],
+        ['Play the tape back', 'stagnes', 'A woman reads nine names. You know eight from the stones at St Agnes. She leaves a gap for the ninth, and in it somebody behind her is breathing fast, and you find you are breathing with them. A bell rings on the tape. It is also ringing outside, up the hill, and you go out to it.']],
       panels: [P(0, 0, 220, 190, 'kitchen', 0.5, 0.5, 1, 'fizz', { fade: [0, 0] }), P(228, 0, 132, 190, 'cassette', 0.5, 0.52, 0.72, 'vig', { live: 1, st: 'xim' }),
         P(0, 198, 230, 180, 'cards', 0.5, 0.52, 1, 'fizz', { fade: [0, 1], live: 1, tint: TINT.cards }), P(0, 386, 360, 48, 'skitter', 0.5, 0.53, 1, 'bars', { live: 1 })],
       text: [{ t: 'be kind.', f: 'd', z: 16, x: 242, y: 232, k: 1 }, { t: 'rewind', f: 'j', z: 36, x: 240, y: 256, k: 2 }, { t: 'your name, your hand.', f: 'd', z: 16, y: 448, k: 1 }] },
     picture: { face: 'p', world: 'town', cap: 'The picture house. A ticket is already through the slot, damp at one corner as if it had been held in a mouth. Inside, every seat but one has a coat buttoned over the back of it and nobody in the coat. The dark has a weight, like a hand laid flat on your head. What is showing is a staircase.',
       ch: [['Take the empty seat', 'landing', 'You sit. The seat is warm. Then the staircase is not on a screen. There is carpet under your shoes, and behind you in the dark every coat has leaned a little forward. You feel it the way you feel a crowd go quiet.'],
         ['Leave by the door under the screen', 'strand', 'The door under the screen opens on shingle and the noise of the sea, so loud you feel it on your skin like rain. Behind you there is only a sea wall, with a wet handprint on it, low down, at the height of a child.'],
-        ['Go through a coat’s pockets', 'stagnes', 'A matchbook from St Agnes Mission. And the clapper of a handbell, wrapped in a child’s sock, still warm. Holding it you are suddenly so sad you have to sit down. Up the hill a bell with no clapper is ringing.']],
+        ['Go through a coat’s pockets', 'stagnes', 'A matchbook from St Agnes Mission. And the clapper of a handbell, wrapped in a child’s sock, still warm. Holding it you are suddenly so sad you have to sit down. Up the hill a bell with no clapper is ringing. You carry it up to it.']],
       panels: [P(0, 0, 170, 270, 'booth', 0.5, 0.5, 0.63, 'fizz', { fade: [0, 0], live: 1 }), P(178, 0, 182, 150, 'cinema', 0.5, 0.5, 1, 'line', { live: 1, tint: TINT.cinema }), P(178, 158, 182, 112, 'reel', 0.5, 0.52, 1, 'vig', { live: 1 })],
       text: [{ t: 'admit one', f: 'j', z: 48, y: 296, k: 2 }, { t: 'tonight only. no late seating.', f: 'd', z: 16, y: 362, k: 1 }] },
     creek: { face: 'g', world: 'graves', cap: 'The creek. The air is thick and sweet and you can feel it on your tongue. Something is tied to the rail of the footbridge. Across the water a tyre on a rope is still moving, the way a swing moves just after a child gets off. Far out, something pale crosses at a walk. Only the top of it shows.',
@@ -103,7 +103,7 @@
       text: [{ t: 'nobody minds them', f: 'j', z: 24, x: 172, y: 236, k: 2 }, { t: 'still hot.', f: 'd', z: 16, x: 8, y: 456, k: 1 }] },
     office: { face: 'g', world: 'works', cap: 'The pay office. A lamp is lit behind the brass and the packets are set out on the sill. One has your name on it, and it is heavy. The wages book lies open at this week. The ink on the last line is wet, and your fingers ache as if they had just put the pen down. On the board, every key but one.',
       ch: [['Take the key that is lit', 'field', 'The tag says HEADLAND. The key is cold enough to hurt, and it pulls a little, the way a dowsing rod is said to. You let it. It walks you out past the last shed to where the ground opens, and then it lies still.'],
-        ['Read back through the book', 'stagnes', 'You turn back a year, ten, forty. The same names, the same hand, and against each one in red: St Agnes. Your own is there on every page. Your eyes sting. You have been buried up there a good many times.'],
+        ['Read back through the book', 'stagnes', 'You turn back a year, ten, forty. The same names, the same hand, and against each one in red: St Agnes. Your own is there on every page. Your eyes sting. You have been buried up there a good many times. You go up to look.'],
         ['Open your packet', 'landing', 'Not money. A latchkey, warm, as if out of a hand. Your thumb knows its teeth. Outside it is a street, and the third house has left its door on the latch for you. The hall smells of your own hair.']],
       panels: [P(0, 0, 226, 250, 'paywin', 0.6, 0.48, 0.9, 'fizz', { fade: [1, 0], live: 1 }), P(234, 0, 126, 250, 'keys', 0.52, 0.5, 0.52, 'line', { live: 1 }), P(50, 258, 300, 180, 'ledger', 0.56, 0.62, 1, 'vig', { live: 1, fall: 0.85 })],
       text: [{ t: 'owing', f: 'j', z: 36, x: 8, y: 262, k: 2 }, { t: 'your name, every week.', f: 'd', z: 16, y: 450, k: 1 }] },
@@ -146,7 +146,8 @@
     strand: { face: 'g', world: 'shore', acc2: '#ff5a4d', cap: 'The strand at low water. The cold comes up through your shoes and you can taste it, like a coin on the tongue. A child’s prints go down to the sea, bare, and do not come back. Somebody dropped a shoe. Every third turn of the light there is a person at the end of the pier.',
       ch: [['Climb the path to the light', 'bluff', 'Halfway up the head you look back. The person on the pier has turned round to watch you climb. They are waving, slowly, and the arm bends in one place too many. Your own elbow aches to see it.'],
         ['Walk out along the pier', 'laststop', 'There is nobody at the end of the pier. There is a bus stop sign, and a wet patch on the boards the shape of two feet. You stand in it before you can stop yourself. It is warm. Out across the sand, something with its inside lights on is driving toward you.'],
-        ['Follow the prints', 'under', 'The prints turn along the sea wall to an iron door, open, with steps inside. On the bottom step is the other shoe. It is so small. You pick it up, and you cannot make yourself put it down.']],
+        ['Follow the prints', 'under', 'The prints turn along the sea wall to an iron door, open, with steps inside. On the bottom step is the other shoe. It is so small. You pick it up, and you cannot make yourself put it down.'],
+        ['Walk the tideline back to the quay', 'quay', 'You keep the water on your left. The prints you are walking in are your own, coming the other way, and they have not finished filling. The quay comes up out of the dark exactly as you left it. That is what is wrong with it.', 1]],
       panels: [P(0, 0, 200, 290, 'lighthouse', 0.5, 0.5, 0.69, 'vig', { live: 1, fall: 0.6 }), P(208, 0, 152, 180, 'pier', 0.52, 0.52, 0.84, 'fizz', { fade: [1, 0], live: 1 }),
         P(208, 188, 152, 152, 'wrack', 0.5, 0.5, 1, 'line', { live: 1 })],
       text: [{ t: 'low water', f: 'j', z: 36, x: 8, y: 318, k: 2 }, { t: 'she was told not to.', f: 'd', z: 16, x: 8, y: 370, k: 1 }] },
@@ -168,7 +169,8 @@
     under: { face: 'g', world: 'cellar', cap: 'Under the town it is all one cellar, warm, like a bed somebody has just left. The dark down here has a taste, like pennies. Candles stand round a chalked sign, and across it lies a shadow that nothing is casting. Behind a door somebody’s feet go back and forth. When you stop, they stop. Six.',
       ch: [['Blow the candles out', 'dark', 'You blow them out, one, two, three. Each goes with a small sound, like a breath let go, and each time your own chest empties further than you meant. Up in the town, lamps go with them. You climb the shaft by feel, into a street with one lamp left.'],
         ['Stand on the sign', 'bath', 'The shadow that nothing was casting stands up when you step onto it. It is your height. It takes your hand, and its hand is wet, and it walks you up the stair to the door with the light under it.'],
-        ['Climb the shaft', 'marrow', 'There are more rungs than there is shaft. Something climbs below you, one rung behind, in no hurry. You can feel its breath on your ankles, and it is not warm. You come out of a coal hole on a street you know.']],
+        ['Climb the shaft', 'marrow', 'There are more rungs than there is shaft. Something climbs below you, one rung behind, in no hurry. You can feel its breath on your ankles, and it is not warm. You come out of a coal hole on a street you know.'],
+        ['Go up the coal stair', 'dunns', 'A stair goes up behind the furnace door, narrow, the treads hollowed in the middle. You count them, and lose count at the same place twice. The plate at the top lets you out on the pavement of Main Street, under a lit globe.', 1]],
       panels: [P(0, 0, 220, 220, 'sigil', 0.5, 0.55, 0.9, 'line'), P(228, 0, 132, 220, 'rungs', 0.52, 0.48, 0.6, 'vig', { live: 1 }), P(60, 228, 240, 180, 'cellar', 0.5, 0.52, 0.8, 'vig', { live: 1 })],
       text: [{ t: 'the stair you came down is gone.', f: 'd', z: 16, y: 436, k: 1 }] },
     den: { face: 'p', world: 'kitchen', cap: 'A sitting room. The chair is warm, and something has its fingers over the top of the chair back, from behind, resting there. Your scalp tightens, slowly, from the back. Every photograph on the mantel has been turned to the wall but one. A tape sits in the mouth of the recorder. Upstairs the taps are running.',
@@ -186,7 +188,8 @@
     laststop: { face: 'm', world: 'lamp', cap: 'It stops. It has never stopped. Your heart stops with it, one long beat. The air that comes out is warm and has been breathed. Nobody is at the wheel. In every window there is a face, side on, holding its breath. The blind says MARROW ST and under it, smaller, your name.',
       ch: [['Get on', 'seat', 'You get on. The step gives under you like something alive. The doors fold shut gently, the way you would shut a door on somebody sleeping, and the gentleness is the worst part.'],
         ['Let it go', 'marrow', 'You stand back. The doors wait longer than is comfortable, then close. Every face in every window turns to watch you not get on. You feel each one land on you, like rain starting. You walk the way it went, since that is the way home.'],
-        ['Walk away up Main Street', 'dummy', 'You turn your back on it, and your back crawls. Main Street is dark from end to end except for one shop window, and in it something is standing very straight, making room.']],
+        ['Walk away up Main Street', 'dummy', 'You turn your back on it, and your back crawls. Main Street is dark from end to end except for one shop window, and in it something is standing very straight, making room.'],
+        ['Run back up the quarry road', 'lane', 'You run the way it came. The hill is longer going up than it ever was coming down, and your lungs burn. At the top there is the verge, and the bend, and you stand where you stood. Far below, a low note starts in your back teeth.', 1]],
       panels: [P(0, 8, 360, 322, 'doors', 0.5, 0.5, 1, 'vig', { live: 1, fall: 0.35 })],
       text: [{ t: 'single', f: 'j', z: 48, y: 336, k: 2 }, { t: 'no return.', f: 'd', z: 16, y: 404, k: 1 }] },
     mere: { face: 'g', world: 'woods', cap: 'Older trees. The quiet is thick in your ears, like cotton wool. An avenue nobody planted runs to something small and red, lit, the wrong way up. Beside it lies a pond. In the water somebody is standing on the far bank. On the far bank nobody is. Behind you the bottles in the oak are knocking together, and there is no wind.',
@@ -198,12 +201,12 @@
 
     attic: { face: 'm', world: 'kitchen', cap: 'Under the roof. The moon comes in at the round window, and where it falls the dust is walked bare, up and down, by small feet. A trunk stands open on a child’s things. The red coat on top is wet. Your throat closes on a name you cannot get out. In the dormer, something under a sheet. The cradle has been set going.',
       ch: [['Lift the sheet', 'door', 'There is nothing under it. The sheet keeps its shape a moment, then drops, and the cold in your stomach drops with it. Behind where it stood the dormer is open, and a ladder goes down from it into a field.'],
-        ['Take out the red coat', 'ninth', 'It is small enough to hold in one hand, and it is heavy with water. You hold it to your face. You know the smell, and your knees go. Through the round window you can see down into the yard.'],
-        ['Stop the cradle', 'bath', 'You put your hand on the hood and it stops. Below you, through the boards, a tap starts to run. It runs for a long time. You find you are counting, and that you know what number it will stop at.']],
+        ['Take out the red coat', 'ninth', 'It is small enough to hold in one hand, and it is heavy with water. You hold it to your face. You know the smell, and your knees go. Through the round window you can see down into the yard. You are down there before the coat has stopped dripping.'],
+        ['Stop the cradle', 'bath', 'You put your hand on the hood and it stops. Below you, through the boards, a tap starts to run. It runs for a long time. You find you are counting, and that you know what number it will stop at. You go down to it.']],
       panels: [P(0, 0, 360, 200, 'attic', 0.5, 0.52, 1, 'line', { live: 1 }), P(0, 208, 150, 240, 'form', 0.42, 0.52, 0.62, 'fizz', { fade: [0, 0], live: 1 }), P(158, 208, 202, 150, 'trunk', 0.45, 0.6, 0.72, 'vig', { live: 1, fall: 0.5 }), P(158, 362, 202, 112, 'cradle', 0.48, 0.56, 0.74, 'line', { live: 1 })],
       text: [] },
     gallery: { face: 'g', world: 'deep', cap: 'The level breaks into something that was here first. Water, dead still, and steps cut down into it. Across it a light, and under the light its twin. On the wall somebody has kept count in fives, right the way back into the dark, and the last gate wants one stroke. The chalk is by your foot. Your hand is already cold with wanting it.',
-      ch: [['Make the stroke', 'shift', 'The chalk squeaks. It goes through your teeth. Somewhere over your head a whistle answers it, and the water shivers once. There is a stair you had not seen, with a handrail worn to the shape of your grip.'],
+      ch: [['Make the stroke', 'shift', 'The chalk squeaks. It goes through your teeth. Somewhere over your head a whistle answers it, and the water shivers once. There is a stair you had not seen, with a handrail worn to the shape of your grip. You take it.'],
         ['Wade across to the light', 'keeper', 'The water is the temperature of your blood, so that you cannot tell where you stop. The light does not get nearer. It gets higher. There are stairs under your feet, going round, and your legs climb them as if they had been asked.'],
         ['Follow the roots in the roof', 'hollow', 'They come down through the rock, thick as your arm, and they are warm. You climb with your face against them and feel something moving slowly inside, like a swallow. They take you up into the foot of a tree.']],
       panels: [P(0, 0, 360, 250, 'cavern', 0.5, 0.5, 1, 'vig', { live: 1, fall: 0.6, tint: TINT.cavern }), P(0, 258, 360, 170, 'tally', 0.45, 0.6, 1, 'bars', { live: 1, tint: TINT.tally })],
@@ -217,7 +220,8 @@
     halt: { face: 'p', world: 'works', cap: 'The works halt. No lamp. The name on the board has been painted out. A freight container stands on the platform with its doors a hand apart, and there is a light on inside it, low down. Nothing has been due here for forty years, and the signal drops. The rails begin to sing. You feel it in the fillings of your teeth before you hear it.',
       ch: [['Answer the telephone in the lamp hut', 'line', 'It has been ringing all the time, you realise, under the singing of the rails. The receiver is warm. Your ear fits the dent in it.'],
         ['Wait on the platform', 'seat', 'What comes in is not a train. It has rubber tyres and every window lit, and it runs up the metals as if they were a road. The door folds open at your feet. Your legs take the step for you.'],
-        ['Walk back up the line to the gate', 'shift', 'You walk between the rails. Others are walking too, ahead and behind, not quite seen, all at your pace. Nobody speaks. The whistle goes, and every one of you breathes in together.']],
+        ['Walk back up the line to the gate', 'shift', 'You walk between the rails. Others are walking too, ahead and behind, not quite seen, all at your pace. Nobody speaks. The whistle goes, and every one of you breathes in together.'],
+        ['Follow the siding round', 'gate', 'The siding curves off through the gorse and you walk the sleepers, which are set a little short for your stride, so that you have to mince. It comes out on the quarry road above the works. The whistle has not gone yet. You find you are waiting for it.', 1]],
       panels: [P(0, 0, 360, 260, 'halt', 0.5, 0.5, 1, 'vig', { live: 1, fall: 0.6 }), P(214, 214, 146, 240, 'signal', 0.42, 0.5, 0.6, 'line', { live: 1, tint: TINT.signal })],
       text: [{ t: 'nothing', f: 'j', z: 36, x: 10, y: 300, k: 2 }, { t: 'is due', f: 'j', z: 36, x: 10, y: 338, k: 2 }, { t: 'it drops anyway.', f: 'd', z: 16, x: 10, y: 400, k: 1 }] },
 
@@ -226,7 +230,8 @@
       ch: [['Stand under the last lamp', 'dark', 'The four you could see go out while you look at them, far one first. In each new dark something is standing. It would only have taken wanting the lamp to stay. You reach for the wanting and there is nothing there, like a step that is not.'],
         ['Go to the lit window', 'bath', 'The window is steamed, and a hand has wiped a clear place in it at the height of a face. Somebody calls down that you are late, and to mind the stain on the third stair. You were always late. The shame of it is as fresh as it ever was.'],
         ['Walk out by the quarry road', 'loop', 'You walk out the way the bus comes in, and you do not look back, not even when the footsteps behind you fall in with yours. Your legs know this hill. They ache in the old places. Then the road starts to come down.'],
-        ['Go round to the yard', 'ninth', 'The washing is still out, in the middle of the night. One sheet has the shape of somebody standing behind it. You lift it, and nobody is, and your hands will not stop shaking, and they smell of earth.']],
+        ['Go round to the yard', 'ninth', 'The washing is still out, in the middle of the night. One sheet has the shape of somebody standing behind it. You lift it, and nobody is, and your hands will not stop shaking, and they smell of earth.'],
+        ['Go up the path to the porch', 'harrow', 'The gate is open. The path is the same number of steps it always was, and your feet count them for you. You are standing on the lawn before you have decided to stop. It was the lit house. It was always going to be the lit house.', 1]],
       panels: [P(0, 0, 360, 220, 'town', 0.5, 0.52, 1, 'bars', { live: 1 }), P(0, 228, 200, 200, 'house', 0.5, 0.5, 1, 'fizz', { fade: [0, 1] }), P(208, 228, 152, 150, 'cat', 0.42, 0.52, 0.8, 'line', { live: 1 })],
       text: [{ t: 'marrow st', f: 'j', z: 36, x: 208, y: 384, k: 2 }, { t: 'you know the house.', f: 'd', z: 16, y: 446, k: 1 }] },
     lightstair: { face: 'm', world: 'shore', cap: 'Inside the light. The stair goes up further than the tower is tall, and looking up it your stomach turns over, like at the top of a swing. The keeper’s log says the same on every line for ninety years: lit. lit. lit. Tonight’s line is written already, in your hand, and it is not finished.',
@@ -285,6 +290,47 @@
       panels: [P(20, 10, 320, 320, 'timeclock', 0.48, 0.46, 0.95, 'vig', { live: 1, fall: 0.35 })],
       text: [{ t: 'clocked in', f: 'j', z: 36, y: 336, k: 2 }, { t: 'the town was piecework.', f: 'd', z: 16, y: 400, k: 1 }] },
   };
+  // coming back. five roads lead round to where a reader may have begun (a choice with a fourth part is one of them). a page the reader has already stood on in the same walk
+  // greets them with re: its own telling, and other ways on. one of those ways always leads round again, so a reader who keeps choosing it never reaches an end
+  const RE = {
+    lane: { cap: 'The quarry road, again. The bus is coming down at the same minute it always has, and this time you know the minute. Your hand is half out already. On the verge the grass is trodden flat in the shape of two feet, and your feet are in it. Nobody you ask has ever seen it stop. You have.',
+      ch: [['Put your hand out, and mean it', 'laststop', 'It slows. It has never slowed. The low note drops out of your teeth and into your knees. It goes a little way past you, the way a thing does that was not sure, and then it is standing still with its lights on, ticking.'],
+        ['Go through the gap in the hedge', 'field', 'You leave the road where you have never left it. The hedge has a gap your width, and the twigs either side are bent back the way you would bend them. Beyond it the ground opens out, cut, and grey.'],
+        ['Take the low path by the churchyard wall', 'stagnes', 'It is a path you did not know you knew. The wall is on your right hand the whole way, and your fingers trail along it and find the place worn smooth where fingers have always trailed.']] },
+    harrow: { cap: 'The Harrow house, again. The porch chair has stopped. It stopped when you came through the gate, the way a room goes quiet. The washing has been taken in. Through the side window the set is on, and whoever was watching is standing now, close to the glass. You know the shape. You have seen it in shop windows as you went by, keeping pace.',
+      ch: [['Sit down in the chair', 'den', 'The cane is warm. It takes your weight and begins to rock, and you let it, and the porch goes by, and the door, and the hall. When it stops you are in the front room, in the chair, and you have not blinked for some time.'],
+        ['Go up by the porch roof', 'attic', 'The trellis holds. Your hands know which laths are sound. The landing window is open a hand’s width and you go on past it, up the slates, to the round light under the ridge, which has never opened, and opens.'],
+        ['Walk on down Marrow Street', 'marrow', 'You leave it. You do not hear the chair start again, and you listen for it all the way down. The lamps on Marrow Street are further apart than they were, and you pass under one and feel it go on looking at the back of your neck.']] },
+    quay: { cap: 'The quay, again. Slack water. It was slack water when you left, and nothing has turned. The handprints on the well rim have dried, all but one pair. There is one more bottle in the elm than there was. The cat has come down. It sits on the cover with its back to you and does not look round, because it knows who it is.',
+      ch: [['Put your hands on the wet pair', 'adit', 'They are warm. The rim tips, or you do. You go down a long way, past the rungs, past where the water was, and come to rest on your feet in a place that is timbered, with rails in the floor.'],
+        ['Take down the new bottle', 'mere', 'This one is cold, and heavy, and what is in it is not a ticket. It is water, and something turning over in the water. It pulls inland, the way a dog pulls, and you go with it, in under trees.'],
+        ['Go down the weed steps to the sand', 'strand', 'The steps are green and you take them sideways. At the bottom the sand is ribbed and hard. Going away along it is a line of prints the size of yours, and a little further on they are coming back.']] },
+    dunns: { cap: 'Main Street, again. The dummy in Dunn’s window has its hand up, flat to the glass, at the height yours would be. You do not put yours to it. Your palm itches. The lit globe has gone out and the one beside it has come on. The letters on the picture house have not changed. It is still Thursday. You are beginning to think it is always Thursday.',
+      ch: [['Go in under the letters', 'landing', 'The foyer is dark, and the stair is the wrong stair. It is carpeted, and narrow, and there is a stain on the third step that you step over without looking. At the top is a landing, and a mirror.'],
+        ['Follow the hose', 'deepwood', 'The hose from the dry pump goes off across the forecourt, and you walk it like a rope. It leaves the town. Somewhere ahead an engine is turning over. The hose is warm now, under your hand, and beating.'],
+        ['Lift the coal plate', 'under', 'The plate in the pavement is loose. You loosened it. The warmth comes up round your legs like bathwater, and you go down the rungs into it. It is not unwelcome. That is the part that frightens you.']] },
+    gate: { cap: 'The works, again. One bay lit, the stack drawing. Somebody has put a new chain on the gate, and cut it. The yard clock has hands now, both of them on the same minute, the one you came in on. The whistle goes, and this time you had breathed in ready. Your feet do not move. They are waiting to be told, and it is you they are waiting on.',
+      ch: [['Go down in the cage', 'adit', 'The cage is at bank with its gate up. It drops when you step in, as though you were the weight it had been waiting for. Your ears close. It lets you out where there are rails in the floor and timber holding up the roof.'],
+        ['Go on past, over the headland', 'field', 'The road gives out beyond the works. Gorse, then a stile with the step worn hollow, then cut ground as far as you can see, and poles going off across it with nothing on them.'],
+        ['Take the men’s path to the halt', 'halt', 'There is a path round the far side of the stack, trodden to clinker, and your feet take it without being asked. It goes down past a hut with a telephone in it to a platform with no name.']] },
+  };
+  // what the reader thinks, top left, where it counts: a few crossroads, and every end. kept rare, or it stops meaning anything
+  const THINK = {
+    stagnes: 'nine names. i know eight. don’t i?', landing: 'i know which stair creaks. how do i know that?', under: 'it is warm down here. why does that feel like home?', marrow: 'this is my street. i have never said that out loud.',
+    adit: 'three ways on. i think i have already chosen.', field: 'somebody stood in that ring. somebody my size.', laststop: 'it has my name on it. who told it my name?',
+    dark: 'i put them out. i think i always do.', tape: 'i have seen this part. i am in this part.', bath: 'nine. i was counting myself.', seat: 'this seat was mine all along.', loop: 'i have done this before. i said that last time, too.', keeper: 'i keep the light. the light keeps me.',
+    hollow: 'i fit. i was always going to fit.', reflection: 'does my face reflect on the surface underwater?', ninth: 'i was not arriving. i know who i am now.', dummy: 'i cannot blink. i remember blinking.', line: 'that was my voice. it still thinks it gets out.', shift: 'every card is mine. i never clocked off.',
+  };
+  // and what they think on finding themselves somewhere for the second time, the third, and after
+  const RECALL = ['i think i’m starting to remember...', 'i have stood here. i stood exactly here.', 'how many times is this?'];
+  for (const [k, v] of Object.entries(RE)) PAGES[k].re = v;
+  for (const [k, v] of Object.entries(THINK)) PAGES[k].think = v;
+  // what each page is called, over its telling
+  const TITLE = { lane: 'The Night Bus', harrow: 'The Harrow House', quay: 'Slack Water', dunns: 'Main Street', gate: 'The Works', shelter: 'The Shelter', parlour: 'The Kitchen', picture: 'The Picture House', creek: 'The Creek', floor: 'The Weaving Shed',
+    office: 'The Pay Office', wellshaft: 'Down the Well', basement: 'Under Dunn’s', stagnes: 'St Agnes', landing: 'The Landing', deepwood: 'A Door', strand: 'Low Water', adit: 'The Level', field: 'The Big Field', under: 'One Cellar', den: 'The Sitting Room',
+    bluff: 'The Head', laststop: 'The Last Stop', mere: 'Older Trees', attic: 'Under the Roof', gallery: 'What Was First', door: 'The Door Again', halt: 'The Works Halt', marrow: 'Marrow Street', lightstair: 'Inside the Light',
+    dark: 'The Long Dark', tape: 'Still Watching', bath: 'Her Voice', seat: 'The Empty Seat', loop: 'Again', keeper: 'The Ninth Lamp', hollow: 'The Hollow', reflection: 'The Face Below', ninth: 'The Ninth Name', dummy: 'In the Window', line: 'The Call Box', shift: 'Clocked In' };
+  for (const k of Object.keys(PAGES)) PAGES[k].title = TITLE[k];
   for (const pg of Object.values(PAGES)) pg.kind = pg.end ? `ending · ${pg.end > 1 ? 'hard box' : 'vignette'}` : `${pg.panels.length} panel${pg.panels.length > 1 ? 's' : ''}`;
   // the way in: three questions, each answer leaning toward a disposition, and where each disposition starts
   const sc = (s, edge, h = 160, w = 160) => ({ w, h, panels: [{ x: 0, y: 0, w, h, s, c: [0.5, 0.5], z: 1, edge, live: 1 }] });
@@ -307,10 +353,10 @@
     hand: { pic: sc('hand', 'line', 240, 240), name: 'The Hand', where: 'Starts at the works gate, as the whistle goes.', bend: 'Nobody could tell you from the others. Neither can you.', start: 'gate' },
     keeper: { pic: sc('keeper', 'line', 240, 240), name: 'The Keeper', where: 'Starts on the shut main street, where the lamps used to be yours.', bend: 'You begin knowing one rule the others have to learn.', start: 'dunns' },
   };
-  // every walk from each way in to an end, as lists of page names. the cat is allowed to turn up more than once; nothing else is, unless a page is a return
+  // every straight walk from each way in to an end, as lists of page names (the roads that lead round are left out: with them a walk need never end). the cat is allowed to turn up more than once; nothing else is, unless a page is a return
   const AGAIN = ['cat'];
   const walks = () => {
-    const out = [], go = (k, path) => { const p = [...path, k]; if (PAGES[k].end) return out.push(p); for (const [, to] of PAGES[k].ch) go(to, p); };
+    const out = [], go = (k, path) => { const p = [...path, k]; if (PAGES[k].end) return out.push(p); for (const [, to, , round] of PAGES[k].ch) if (!round) go(to, p); };
     for (const e of Object.values(ENTRIES)) go(e.start, []);
     return out;
   };
@@ -330,6 +376,6 @@
     if (!pg) (TINT[x] || []).forEach((t, i) => { if (t) c[2 + i] = t; });
     return c;
   };
-  const DATA = { WORLDS, HOME, TINT, PAGES, QUIZ, ENTRIES, PW, PH, pal, walks, repeats };
+  const DATA = { WORLDS, HOME, TINT, PAGES, QUIZ, ENTRIES, RECALL, PW, PH, pal, walks, repeats };
   if (typeof module !== 'undefined') module.exports = DATA; else globalThis.DFDATA = DATA;
 })();

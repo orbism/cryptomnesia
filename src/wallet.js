@@ -1,4 +1,4 @@
-import { parseEther } from 'viem';
+import { parseAbiItem, parseEther } from 'viem';
 import { createConfig, http } from 'wagmi';
 import { foundry, mainnet, sepolia } from 'wagmi/chains';
 import { coinbaseWallet, injected, walletConnect } from 'wagmi/connectors';
@@ -7,7 +7,12 @@ const env = import.meta.env;
 export const chain = { localhost: foundry, sepolia, mainnet }[env.VITE_CHAIN] || sepolia;
 export const contract = env.VITE_CONTRACT || null;
 export const PRICE = parseEther('0.003');
-// the one call the site makes on contracts/src/Cryptomnesia.sol
+// what the site asks of contracts/src/Cryptomnesia.sol: the one call it makes, and the event every mint leaves behind (from = nobody)
+export const MINTED = parseAbiItem('event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value)');
+// where one token is on OpenSea, on the chains OpenSea knows
+const SEA = { [mainnet.id]: 'https://opensea.io/assets/ethereum', [sepolia.id]: 'https://testnets.opensea.io/assets/sepolia' }[chain.id];
+export const seaToken = (id) => (SEA && contract ? `${SEA}/${contract}/${id}` : null);
+export const START = BigInt(env.VITE_DEPLOY_BLOCK || 0);   // the block the contract went in at, so the minted list need not search from the beginning
 export const ABI = [{ type: 'function', name: 'mint', stateMutability: 'payable', inputs: [{ name: 'id', type: 'uint256' }, { name: 'amount', type: 'uint256' }], outputs: [] }];
 
 // browser wallets and Coinbase Wallet need no key. WalletConnect joins only if a project id is supplied

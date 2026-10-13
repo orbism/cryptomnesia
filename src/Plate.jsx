@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { DF } from './lib.js';
 
-const still = matchMedia('(prefers-reduced-motion: reduce)');
+export const still = matchMedia('(prefers-reduced-motion: reduce)');
 
 // --- page turns: the old plate goes, fast, and the new one comes up out of the same dark. each world has its own way of going
 const OUT = 340, IN = 480;
@@ -31,7 +31,8 @@ function gone(src, out, w, h, t, fx, edge) {
 let last = null;                                         // the plate that was up before this one: { px, w, h, fx, edge }
 
 // one page (or one scene) drawn by the engine, its moving panels stepped every 220 ms
-export default function Plate({ page, colors, small }) {
+// plain = put up as it is: no turn into it, and nothing later turns out of it
+export default function Plate({ page, colors, small, plain }) {
   const ref = useRef(null);
   useEffect(() => {
     const cv = ref.current, fx = page.end ? 'burn' : FX[page.world] || 'dissolve', edge = abgr(colors[2]);
@@ -40,7 +41,7 @@ export default function Plate({ page, colors, small }) {
       if (dead) return;
       const step = DF.mount(cv, page, colors), g = cv.getContext('2d'), { w, h } = page;
       const run = () => { let tick = 0; if (!still.matches) timer = setInterval(() => step(++tick), 220); };
-      if (still.matches) return run();
+      if (plain || still.matches) return run();
       const next = g.getImageData(0, 0, w, h), px = new Uint32Array(next.data.buffer.slice(0)), buf = g.createImageData(w, h), out = new Uint32Array(buf.data.buffer);
       const old = last && last.w === w && last.h === h ? last : null, t0 = performance.now(), lead = old ? OUT : 0;
       const frame = (now) => {
@@ -56,8 +57,8 @@ export default function Plate({ page, colors, small }) {
     });
     return () => {
       dead = true; clearInterval(timer); cancelAnimationFrame(raf);
-      try { last = { px: new Uint32Array(cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data.buffer), w: cv.width, h: cv.height, fx, edge }; } catch { last = null; }
+      if (!plain) try { last = { px: new Uint32Array(cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data.buffer), w: cv.width, h: cv.height, fx, edge }; } catch { last = null; }
     };
-  }, [page, colors]);
+  }, [page, colors, plain]);
   return <canvas ref={ref} className={small ? 'plate small' : 'plate'} width={page.w} height={page.h} style={{ '--ar': page.w / page.h }} />;
 }

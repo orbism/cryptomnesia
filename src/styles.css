@@ -1,5 +1,8 @@
 /* a late-eighties terminal: the plate on the left, the telling and a menu on the right, everything in the page's own colours */
 :root { color-scheme: dark; --ground: #0d1218; --ink: #5c6c7e; --accent: #ff7a1a; --bone: #d3ccba; }
+/* the ornate frame is drawn on a canvas laid over whatever it holds: mostly in the room a clear border leaves for it, a little of it over the edge of what is inside */
+.ornate { position: relative; isolation: isolate; border: var(--b) solid transparent; }
+.ornate > .orn { position: absolute; z-index: 1; top: calc(-1 * var(--b)); left: calc(-1 * var(--b)); pointer-events: none; }
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
 body { margin: 0; background: var(--ground); transition: background 0.6s; color: var(--bone); font: 18px/1.4 "DotGothic16", ui-monospace, Menlo, monospace; }
@@ -7,46 +10,120 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 :focus-visible { outline: 1px solid var(--bone); outline-offset: 3px; }
 
 header { display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; padding: 10px 20px; color: #7d858d; }
-header h1 { margin: 0; font: 600 30px/1 "Grenze Gotisch", serif; color: var(--bone); }
-header button, header nav a, .note button { transition: color 0.5s ease; }
-header button:hover, .note button:hover { color: #ff2a2a; }
+/* the title does not keep one colour: every three seconds it takes the next */
+header h1 { margin: 0; font: 600 30px/1 "Grenze Gotisch", serif; color: var(--bone); animation: hues 15s infinite; }
+@keyframes hues { 0%, 18.67% { color: #d3ccba; } 20%, 38.67% { color: #ff2a2a; } 40%, 58.67% { color: #9dff5a; } 60%, 78.67% { color: #ff7a1a; } 80%, 98.67% { color: #8f7cff; } 100% { color: #d3ccba; } }
+header button, .note button { transition: color 0.5s ease; }
+header button:hover, header nav button.on, .note button:hover { color: #ff2a2a; }
+header h1 button { transition: none; }
+header h1 button:hover { color: inherit; }
 header nav { position: relative; display: flex; gap: 14px; align-items: center; margin: 0 auto 0 18px; }
-header nav a, header nav .soon { display: grid; color: inherit; }
-header nav a:hover { color: #ff2a2a; }
-header nav .soon { opacity: 0.35; }
+header nav .links { display: flex; gap: 14px; align-items: center; margin-right: 14px; }
+header nav .burger { display: none; }
+header .me { color: var(--bone); transition: color 0.5s ease; }
+header button:hover .me { color: #ff2a2a; }
 /* what this is, let down under the title. it sits on the page's own ground so nothing shows through */
-.about { position: absolute; z-index: 2; top: calc(100% + 12px); left: 0; width: min(46ch, calc(100vw - 40px)); padding: 4px 18px; background: var(--ground); border: 1px solid var(--ink); color: var(--bone); font-size: 15px; }
-.about .entry { color: #dcb88a; }
+.about { position: absolute; z-index: 2; top: calc(100% + 12px); left: 0; width: min(52ch, calc(100vw - 40px)); padding: 4px 18px; background: var(--ground); border: 1px solid var(--ink); color: var(--bone); font-size: 15px; }
+.entry { color: #dcb88a; }
 .about b { font-weight: normal; }
-.seen, .folio { position: fixed; left: 20px; bottom: 12px; color: #7d858d; font-size: 14px; }
-.folio { left: auto; right: 20px; }
-.about .entry b { font: 600 20px/1 "Grenze Gotisch", serif; }
+/* the foot of the window: black, a hair of a rule over it. the reader's thought lies on it at the left; the way out and the page number sit at the right */
+footer { position: fixed; z-index: 1; inset: auto 0 0 0; display: flex; justify-content: flex-end; gap: 18px; align-items: center; min-height: 38px; padding: 10px 20px; background: #000; border-top: 1px solid #111; color: #7d858d; font-size: 14px; }
+footer button, footer a { display: grid; color: inherit; transition: color 0.5s ease; }
+footer .soon { display: grid; opacity: 0.35; }
+footer button:hover, footer a:hover { color: #ff2a2a; }
+.entry b { font: 600 20px/1 "Grenze Gotisch", serif; }
 .wallets { display: flex; gap: 14px; flex-wrap: wrap; }
 
-.scene { display: grid; grid-template-columns: auto minmax(0, 34ch); gap: 28px; justify-content: center; align-items: center; min-height: calc(100% - 56px); padding: 12px 20px 28px; }
+/* the telling's column is 34 characters on a tall window. on a short one the picture is narrower, and the column takes the room it leaves, so the telling runs wider and shallower and what is under it stays in view */
+.scene { --wide: max(34ch, min(calc(100vw - (100vh - 136px) * 0.75 - 110px), clamp(34ch, calc(34ch + (860px - 100vh) * 0.9), 66ch))); display: grid; grid-template-columns: auto minmax(0, var(--wide)); gap: 28px; justify-content: center; align-items: center; min-height: calc(100% - 56px); padding: 12px 20px 54px; }
 /* as tall as the window allows, never wider than its column; --ar is the plate's width over its height */
-.plate { display: block; image-rendering: pixelated; width: min(60vw, calc((100vh - 110px) * var(--ar))); height: auto; }
+.plate { display: block; image-rendering: pixelated; width: min(60vw, calc((100vh - 136px) * var(--ar))); height: auto; }
 /* the pictures beside the opening questions are small windows, and the pair sits in the middle of the page */
 .plate.small { width: min(320px, 42vw); }
-.words { display: grid; gap: 18px; align-content: center; min-height: 14em; }
+.words { display: grid; gap: 18px; align-content: center; min-height: 14em; width: var(--wide); max-width: 100%; }   /* a set width: nothing in it can push the telling about */
 .telling { margin: 0; white-space: pre-line; }
+/* what the page is called, in a frame of its own over the telling */
+.title { justify-self: start; margin: 0; padding: 7px 16px 8px; color: var(--bone); font: 600 22px/1 "Grenze Gotisch", serif; letter-spacing: 0.02em; }
+.save { justify-self: start; display: flex; gap: 8px; align-items: center; margin-top: 6px; color: var(--ink); font-size: 14px; transition: color 0.5s ease; }
+.title.asks { cursor: pointer; }
+.frame .entry { margin: 0; cursor: pointer; }
+.save:hover { color: #ff2a2a; }
+.save:disabled { cursor: default; }
 /* the option under the cursor changes colour and nothing else: the mark and the block take no room, so no line ever re-wraps */
 .choices { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; color: #b3122e; }
 .choices li { display: flex; }
 .choices li::before { content: ">"; flex: none; width: 2ch; visibility: hidden; }
 .choices li.on { color: #ff2a2a; }
 .choices li.on::before { visibility: visible; }
-.choices li.on button::after { content: "\2588"; position: absolute; margin-left: 0.4ch; animation: blink 1s steps(1) infinite; }
-/* over the opening questions, until they have been answered */
-.ask { position: absolute; margin: 0; left: 20px; top: 62px; color: #7d858d; }
-.ask::after { content: "\2588"; margin-left: 0.4ch; animation: blink 1s steps(1) infinite; }
-.note { margin: 0; color: var(--ink); font-size: 14px; }
+.choices li.on button::after { content: "\258C"; position: absolute; margin-left: 0.4ch; animation: blink 1s steps(1) infinite; }
+/* what the reader is thinking, bottom left: through the opening questions, then now and again at a crossroads, on coming round to a place a second time, and at an end */
+.ask { position: fixed; z-index: 2; margin: 0; left: 20px; bottom: 10px; color: #7d858d; font-size: 14px; }
+.ask:not(:empty)::after { content: "\258C"; margin-left: 0.4ch; animation: blink 1s steps(1) infinite; }
+.note { margin: 0; color: var(--ink); font-size: 14px; min-height: 1.4em; }
 .note button { color: var(--accent); }
+.note button:disabled { opacity: 0.4; cursor: default; }
+/* minting sits well below the choices: how many, the price, and under them one line for whatever came of it */
+.mint { margin-top: clamp(8px, 3.5vh, 30px); display: grid; gap: 4px; justify-items: start; }
+/* the mint button is three lines in the ornate frame */
+.mintbox { padding: 14px 22px; color: var(--accent); font-size: 16px; line-height: 1.75; cursor: pointer; transition: color 0.5s ease; }
+/* what came of it: a little way under the button, and a little brighter than the other small print */
+.mint .note { margin-top: 14px; font-size: 16px; color: color-mix(in srgb, var(--ink), var(--bone)); }
+.mintbox.busy { opacity: 0.4; pointer-events: none; }
+.mintbox:hover { color: #ff2a2a; }
+.mintbox span { display: block; }
+.qty { margin: 0 0.6ch; }
+.mintbox .qty { display: inline; }
+.mintbox button { color: var(--accent); font-size: 11px; vertical-align: 1px; }
+.qty button { padding: 0 0.5ch; }
+.qty b { display: inline-block; width: 2ch; text-align: center; font-weight: normal; color: var(--bone); }
+.eth { color: var(--bone); font-weight: bold; text-decoration: underline; text-underline-offset: 3px; }
+.about a, .shelf button { color: var(--accent); transition: color 0.5s ease; }
+.about a { display: inline; text-decoration: none; }
+.about a:hover, .shelf button:not(:disabled):hover { color: #ff2a2a; }
+/* what has been minted: number, page, how many; under one, when asked, who */
+.shelf { padding: 12px 20px 80px; display: grid; gap: 14px; justify-items: start; }
+.shelf > .note { font-size: 18px; color: var(--bone); }
+.shelf ol, .shelf ul { list-style: none; margin: 0; padding: 0; }
+/* eight to a column, then the next column; every other one a shade off its neighbours, and the one under the pointer a shade off again */
+.shelf ol { margin-left: -10px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 300px); gap: 0 28px; }
+.shelf ol > li { display: grid; grid-template-columns: 72px 1fr auto; gap: 0 16px; align-items: center; padding: 6px 10px; transition: background 0.2s ease; }
+.shelf ol > li:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+.shelf ol > li:hover { background: rgba(255, 255, 255, 0.07); }
+.shelf ol > li > button:not(.thumb) { display: grid; grid-template-columns: 4ch 1fr auto; }
+.shelf .thumb { display: block; line-height: 0; }
+.shelf .thumb canvas { width: 72px; height: auto; }   /* this small, smoothed reads better than hard pixels */
+.shelf a { color: var(--ink); font-size: 14px; text-decoration: none; transition: color 0.5s ease; }
+.shelf a:hover { color: #ff2a2a; }
+.shelf ul { grid-column: 2 / -1; padding: 2px 0 6px 4ch; color: var(--bone); font-size: 15px; }
+/* something brought up over the page in the ornate frame: a question, or one minted page to look at (wide) */
+.veil { position: fixed; z-index: 3; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, 0.85); }
+.frame { max-width: min(48ch, 90vw); padding: 30px 34px 26px; background: #000; color: var(--bone); line-height: 1.6; }
+.frame p { margin: 0 0 26px; }
+.frame .row { display: flex; gap: 44px; justify-content: center; margin: 0; }
+.frame .row button { color: var(--bone); transition: color 0.5s ease; }
+.frame .row button:hover { color: #ff2a2a; }
+/* the page is as tall as the window lets it be once the frame (--f deep) has had its share, and the frame stands ten pixels off it. the way out is the stone at the heart of the top right corner (--k in) */
+.frame.wide { max-width: none; padding: 10px; line-height: 0; }
+.frame.wide .plate { width: min(calc((100vh - 2 * var(--f) - 70px) * var(--ar)), calc(100vw - 2 * var(--f) - 70px)); }
+.frame .shut { position: absolute; z-index: 2; top: calc(var(--k) - var(--f) - 10px); right: calc(var(--k) - var(--f) - 10px); width: 21px; height: 21px; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); background: #ff2a2a; color: #000; font: bold 11px/21px ui-monospace, Menlo, monospace; text-align: center; transition: background 0.5s ease, color 0.5s ease; }
+.frame .shut:hover { background: #000; color: #ff2a2a; }
 @keyframes blink { 50% { opacity: 0; } }
 
 @media (max-width: 820px) {
-  .scene { grid-template-columns: minmax(0, 1fr); align-items: start; }
-  .plate { width: 100%; height: auto; }
-  .plate.small { width: min(320px, 70vw); margin: 0 auto; }
+  /* the two words go behind three bars, and come down under them when asked */
+  header nav .burger { display: block; }
+  header nav .links { display: none; position: absolute; z-index: 2; top: calc(100% + 12px); left: 0; flex-direction: column; align-items: flex-start; gap: 8px; margin: 0; padding: 10px 18px; background: var(--ground); border: 1px solid var(--ink); white-space: nowrap; }
+  header nav .links.open { display: flex; }
+  header nav .links span { display: none; }
+  /* on a phone the picture has the screen, whole, and the telling is a sheet kept folded under it with its title showing. touch the picture or the title and it comes up over the picture; touch again and it goes */
+  .scene { --wide: 100%; grid-template-columns: minmax(0, 1fr); align-items: start; justify-items: center; padding: 8px 12px 120px; }
+  .scene:has(.sheet) { min-height: 0; height: calc(100dvh - 162px); align-content: center; padding: 0; }   /* a story page: the picture edge to edge, as big as the room between the header and the folded sheet allows, and centred in it */
+  .plate { width: min(100vw, calc((100dvh - 166px) * var(--ar))); height: auto; }
+  .plate.small { width: min(320px, 70vw, calc((100dvh - 420px) * var(--ar))); margin: 0 auto; }
+  .words.sheet { position: fixed; z-index: 0; left: 0; right: 0; bottom: 38px; width: auto; min-height: 0; max-height: calc(100dvh - 90px); overflow-y: auto; gap: 10px; align-content: start; padding: 8px 16px 14px; background: var(--ground); border-top: 1px solid var(--ink); font-size: 16px; line-height: 1.32; transform: translateY(calc(100% - 68px)); transition: transform 0.35s ease; }
+  .words.sheet.open { transform: none; }
+  .words.sheet .title { cursor: pointer; }
+  .words.sheet .mint { margin-top: 4px; }
+  .art { cursor: pointer; }
 }
-@media (prefers-reduced-motion: reduce) { .choices li.on button::after { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .choices li.on button::after, .ask::after, header h1 { animation: none; } }
