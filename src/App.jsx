@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Choices from './Choices.jsx';
 import Editions from './Editions.jsx';
+import Download from './Download.jsx';
 import Footer from './Footer.jsx';
-import { gif } from './gif.js';
 import Header from './Header.jsx';
 import Modal from './Modal.jsx';
 import Ornate from './Ornate.jsx';
@@ -14,13 +14,13 @@ const KEY = 'cryptomnesia-run';
 // progress saved under the old name is still read
 const saved = () => { try { return JSON.parse(localStorage.getItem(KEY) || localStorage.getItem('darkforest-run')) || {}; } catch { return {}; } };
 
-// text arrives a few letters at a time; any key or click finishes it. bold = a part of it to set heavy
+// text arrives fast, a paragraph at a time with a breath between; any key or click finishes it. bold = a part of it to set heavy
 function Typed({ text, bold, onDone }) {
   const [n, setN] = useState(0);
   const done = n >= text.length;
   useEffect(() => {
     if (done) return onDone();
-    const t = setTimeout(() => setN((x) => x + 2), 18), skip = () => setN(text.length);
+    const br = text.indexOf('\n\n', n), t = setTimeout(() => setN(br === n ? n + 2 : br > n ? Math.min(br, n + 6) : n + 6), br === n ? 200 : 12), skip = () => setN(text.length);
     addEventListener('keydown', skip); addEventListener('pointerdown', skip);
     return () => { clearTimeout(t); removeEventListener('keydown', skip); removeEventListener('pointerdown', skip); };
   }, [n, done, text, onDone]);
@@ -35,7 +35,7 @@ function Scene({ page, colors, title, onTitle, text, bold, items, onPick, small,
   return (
     <main className="scene" style={{ '--ink': colors[1], '--accent': colors[2] }}>
       <div className="art" onClick={flip}><Plate page={page} colors={colors} small={small} /></div>
-      <div className={`words${small ? '' : ' sheet'}${open ? ' open' : ''}`}>
+      <div className={`words${small ? '' : ' drawer'}${open ? ' open' : ''}`}>
         <Ornate as="h2" level={4} className={onTitle ? 'title asks' : 'title'} role={onTitle && 'button'} onClick={onTitle || flip}>{title}</Ornate>
         <Typed text={text} bold={bold} onDone={done} />
         {ready && <Choices items={items} onPick={onPick} />}
@@ -43,19 +43,6 @@ function Scene({ page, colors, title, onTitle, text, bold, items, onPick, small,
       </div>
     </main>
   );
-}
-
-// the page as a looping GIF. it takes a moment to draw, and says so
-function Download({ page, colors, name }) {
-  const [busy, setBusy] = useState(false);
-  const save = async () => {
-    setBusy(true);
-    await new Promise((r) => setTimeout(r, 30));                                // let the word change before the drawing holds everything up
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(await gif(page, colors)); a.download = `${name}.gif`; a.click(); URL.revokeObjectURL(a.href);
-    setBusy(false);
-  };
-  return <button type="button" className="save" disabled={busy} onClick={save}><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14" /></svg>{busy ? 'drawing…' : 'download'}</button>;
 }
 
 const shuffle = (a) => a.map((x) => [Math.random(), x]).sort((p, q) => p[0] - q[0]).map((x) => x[1]);
@@ -90,11 +77,15 @@ export default function App() {
   // been = how many times this walk has stood on each page: a second time, the page may greet the reader differently and offer other ways on.
   // a road that leads round counts as a second time even on a first: the reader has been here, whether or not they walked it tonight
   const [leave, setLeave] = useState(false);                                    // the reader has asked to start over, and is being asked if they mean it
-  const [shelf, setShelf] = useState(false);                                    // the list of what has been minted, in place of the story
+  // the editions page is the one place with an address of its own: #editions, and #editions/<page> with that page brought up. anything else on the end is taken off
+  const readHash = () => { const m = location.hash.match(/^#editions(?:\/([a-z]+))?$/); return { shelf: !!m, piece: m && PAGES[m[1]] ? m[1] : null }; };
+  const [where, setWhere] = useState(readHash), shelf = where.shelf;
+  const to = (h) => { if (h) location.hash = h; else { history.pushState(null, '', location.pathname); setWhere(readHash()); } };
+  useEffect(() => { const f = () => setWhere(readHash()); addEventListener('hashchange', f); return () => removeEventListener('hashchange', f); }, []);
   const [run, setRun] = useState(() => { const { at = null, lead, been, from } = saved(); return { at, lead, been, from }; });
   useEffect(() => {
     try { localStorage.setItem(KEY, JSON.stringify(run)); } catch { /* private window */ }
-    if (location.hash) history.replaceState(null, '', location.pathname);        // an old link with a page on the end of it: the page is not honoured, and the end comes off
+    if (location.hash && !location.hash.startsWith('#editions')) history.replaceState(null, '', location.pathname);   // an old link with a story page on the end of it: the page is not honoured, and the end comes off
   }, [run]);
   const go = useCallback((to, lead, round) => setRun((r) => (PAGES[to] ? { at: to, lead, been: { ...(r.at && r.been), [to]: Math.max((r.at && r.been?.[to]) || 0, round ? 1 : 0) + 1 } } : { at: null, from: r.at })), []);
   const pg = PAGES[run.at], times = run.been?.[run.at] || 1, now = (times > 1 && pg?.re) || pg;       // now = the telling and the choices for this visit
@@ -102,7 +93,7 @@ export default function App() {
   const page = useMemo(() => pg && { ...pg, w: PW, h: PH }, [pg]), colors = useMemo(() => pg && pal(pg), [pg]);
   return (
     <>
-      <Header shelf={shelf} onShelf={() => setShelf(!shelf)} onHome={() => setShelf(false)} />
+      <Header shelf={shelf} onShelf={() => to(shelf ? '' : '#editions')} onHome={() => to('')} />
       {pg && !shelf && <p className="ask">{thought}</p>}
       <Footer>{pg && !shelf && <><button type="button" onClick={() => setLeave(true)}>forget</button><span>page {String(tokenId(run.at)).padStart(2, '0')}</span></>}</Footer>
       {leave && (
@@ -111,7 +102,7 @@ export default function App() {
           <p className="row"><button type="button" onClick={() => setLeave(false)}>cancel</button><button type="button" onClick={() => { setLeave(false); setRun({ at: null }); }}>confirm</button></p>
         </Modal>
       )}
-      {shelf ? <Editions /> : pg
+      {shelf ? <Editions piece={where.piece} onPiece={(k) => to(k ? `#editions/${k}` : '#editions')} /> : pg
         ? <Scene key={run.at} page={page} colors={colors} title={pg.title} text={run.lead ? `${run.lead}\n\n${now.cap}` : now.cap} items={now.ch} onPick={([, to, lead, round]) => go(to, lead, round)}><Mint id={tokenId(run.at)} /><Download page={page} colors={colors} name={`cryptomnesia-${String(tokenId(run.at)).padStart(2, '0')}-${run.at}`} /></Scene>
         : <Quiz from={run.from} onStart={(to) => go(to)} />}
     </>

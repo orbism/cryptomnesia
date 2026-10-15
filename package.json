@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "pack": "node scripts/pack.mjs",
+    "fonts": "node scripts/fonts.mjs",
+    "covers": "node scripts/covers.mjs",
     "test:contracts": "cd contracts && forge test",
     "deploy": "node scripts/deploy.mjs"
   },

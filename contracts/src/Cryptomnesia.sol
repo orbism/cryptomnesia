@@ -9,6 +9,7 @@ import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
 /// Cryptomnesia: one ERC-1155 token per page of the book. Nothing lives off this chain.
 /// The program that draws every page is stored here once, gzipped, as contract code. uri() hands back a web page
 /// that unpacks it in the browser and draws the token's page, moving, exactly as the site does.
+/// For places that show only a picture, a small still of every page is stored too, as PNG.
 contract Cryptomnesia is ERC1155, ERC2981, Ownable {
     string public name;
     string public symbol;
@@ -16,7 +17,9 @@ contract Cryptomnesia is ERC1155, ERC2981, Ownable {
     uint256 public immutable cap; // most copies of any one page. 0 = no limit
     bool public locked; // once set, the art and the page list can never change
     address[] public chunks; // the drawing program, gzipped, in pieces, each held as a contract's code
+    address[] public covers; // a still of every page, PNG, one after another behind a table of where each ends, in pieces as above
     string[] public pages; // token id n is pages[n - 1]
+    uint256 constant PIECE = 24575; // what every stored piece but the last must hold
     mapping(uint256 id => uint256) public totalSupply;
 
     error Locked();
@@ -26,10 +29,15 @@ contract Cryptomnesia is ERC1155, ERC2981, Ownable {
     error NotPaid();
     error NotStored();
 
-    constructor(string memory name_, string memory symbol_, uint256 price_, uint256 cap_, address owner_, address royaltyTo, uint96 royaltyBps)
-        ERC1155("")
-        Ownable(owner_)
-    {
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        uint256 price_,
+        uint256 cap_,
+        address owner_,
+        address royaltyTo,
+        uint96 royaltyBps
+    ) ERC1155("") Ownable(owner_) {
         name = name_;
         symbol = symbol_;
         price = price_;
@@ -60,16 +68,24 @@ contract Cryptomnesia is ERC1155, ERC2981, Ownable {
         _;
     }
 
-    /// Store the next piece of the gzipped program. A piece may be at most 24575 bytes.
-    function addChunk(bytes calldata data) external onlyOwner unlocked {
-        // deploy a contract whose code is a STOP byte followed by the data (the SSTORE2 pattern): code is the cheapest place to keep bytes
+    /// Deploy a contract whose code is a STOP byte followed by the data (the SSTORE2 pattern): code is the cheapest place to keep bytes.
+    function _keep(bytes calldata data) private returns (address at) {
         bytes memory init = abi.encodePacked(hex"600B5981380380925939F300", data);
-        address at;
         assembly {
             at := create(0, add(init, 32), mload(init))
         }
         if (at == address(0)) revert NotStored();
-        chunks.push(at);
+    }
+
+    /// Store the next piece of the gzipped program. A piece may be at most 24575 bytes.
+    function addChunk(bytes calldata data) external onlyOwner unlocked {
+        chunks.push(_keep(data));
+    }
+
+    /// Store the next piece of the stills. Every piece but the last must be exactly 24575 bytes.
+    /// The whole begins with three bytes for each page, the offset at which that page's PNG ends; the PNGs follow in page order.
+    function addCover(bytes calldata data) external onlyOwner unlocked {
+        covers.push(_keep(data));
     }
 
     /// Throw away what has been stored so far, to start an upload again.
@@ -77,9 +93,15 @@ contract Cryptomnesia is ERC1155, ERC2981, Ownable {
         delete chunks;
     }
 
+    function clearCovers() external onlyOwner unlocked {
+        delete covers;
+    }
+
     function setPages(string[] calldata list) external onlyOwner unlocked {
         delete pages;
-        for (uint256 i; i < list.length; ++i) pages.push(list[i]);
+        for (uint256 i; i < list.length; ++i) {
+            pages.push(list[i]);
+        }
     }
 
     /// Irreversible.
@@ -97,11 +119,17 @@ contract Cryptomnesia is ERC1155, ERC2981, Ownable {
         return chunks.length;
     }
 
+    function coverCount() external view returns (uint256) {
+        return covers.length;
+    }
+
     /// The whole gzipped program, pieces joined.
     function art() public view returns (bytes memory out) {
         uint256 n = chunks.length;
         uint256 size;
-        for (uint256 i; i < n; ++i) size += chunks[i].code.length - 1;
+        for (uint256 i; i < n; ++i) {
+            size += chunks[i].code.length - 1;
+        }
         out = new bytes(size);
         uint256 at = 32;
         for (uint256 i; i < n; ++i) {
@@ -118,22 +146,43 @@ contract Cryptomnesia is ERC1155, ERC2981, Ownable {
     function html(uint256 id) public view returns (string memory) {
         if (id == 0 || id > pages.length) revert NoSuchPage();
         return string.concat(
-            '<!doctype html><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><title>', name, "</title>",
+            '<!doctype html><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><title>',
+            name,
+            "</title>",
             "<style>body{margin:0;height:100vh;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden}canvas{image-rendering:pixelated;width:min(100vw,75vh);height:auto}</style>",
-            '<canvas id=c width=360 height=480></canvas><script>P="', pages[id - 1], '";Z="', Base64.encode(art()),
+            '<canvas id=c width=360 height=480></canvas><script>P="',
+            pages[id - 1],
+            '";Z="',
+            Base64.encode(art()),
             '";(async()=>{const b=Uint8Array.from(atob(Z),c=>c.charCodeAt(0));(0,eval)(await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream("gzip"))).text())})()</script>'
         );
     }
 
-    /// A still card for places that only show a picture: the title and the page's name, as SVG.
-    function card(uint256 id) public view returns (string memory) {
+    /// Where page id's still ends, read from the table at the head of the stills.
+    function _end(uint256 id) private view returns (uint256 v) {
+        address c = covers[0];
+        assembly {
+            extcodecopy(c, 0, add(1, mul(sub(id, 1), 3)), 3)
+            v := shr(232, mload(0))
+        }
+    }
+
+    /// A still of the page, half size, as a PNG: for places that only show a picture. Empty until the stills are stored.
+    function cover(uint256 id) public view returns (bytes memory out) {
         if (id == 0 || id > pages.length) revert NoSuchPage();
-        return string.concat(
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 480"><rect width="360" height="480" fill="#06080b"/>',
-            '<rect x="12.5" y="12.5" width="335" height="455" fill="none" stroke="#b3122e"/>',
-            '<text x="180" y="228" fill="#d3ccba" font-family="Georgia,serif" font-size="30" text-anchor="middle">', name, "</text>",
-            '<text x="180" y="266" fill="#b3122e" font-family="monospace" font-size="16" text-anchor="middle">', pages[id - 1], "</text></svg>"
-        );
+        if (covers.length == 0) return out;
+        uint256 from = id == 1 ? pages.length * 3 : _end(id - 1);
+        uint256 len = _end(id) - from;
+        out = new bytes(len);
+        for (uint256 done; done < len;) {
+            address c = covers[(from + done) / PIECE];
+            uint256 off = (from + done) % PIECE;
+            uint256 n = PIECE - off < len - done ? PIECE - off : len - done;
+            assembly {
+                extcodecopy(c, add(add(out, 32), done), add(off, 1), n)
+            }
+            done += n;
+        }
     }
 
     function uri(uint256 id) public view override returns (string memory) {
@@ -142,10 +191,17 @@ contract Cryptomnesia is ERC1155, ERC2981, Ownable {
             Base64.encode(
                 bytes(
                     string.concat(
-                        '{"name":"', name, ": ", pages[id - 1],
-                        '","description":"A page of ', name, '. Drawn by code held on chain, in the browser, every time it is opened.","image":"data:image/svg+xml;base64,',
-                        Base64.encode(bytes(card(id))),
-                        '","animation_url":"data:text/html;base64,', Base64.encode(bytes(html(id))), '"}'
+                        '{"name":"',
+                        name,
+                        ": ",
+                        pages[id - 1],
+                        '","description":"A page of ',
+                        name,
+                        '. Drawn by code held on chain, in the browser, every time it is opened.","image":"data:image/png;base64,',
+                        Base64.encode(cover(id)),
+                        '","animation_url":"data:text/html;base64,',
+                        Base64.encode(bytes(html(id))),
+                        '"}'
                     )
                 )
             )

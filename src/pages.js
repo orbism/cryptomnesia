@@ -162,7 +162,7 @@
       ch: [['Walk out to the light', 'door', 'It takes longer than it should. The stubble pulls at your ankles like fingers. The light is not a lamp. It is a line, upright, the height of a door, and you know before you get there whose door.'],
         ['Stand in the ring', 'mere', 'The trodden straw is warm under your feet. The field goes round you once, slowly, and your stomach goes with it. When it stops the stubble is trees, old ones, and you are standing in the same ring, in moss.'],
         ['Follow the poles', 'halt', 'You count them to keep steady. At each one something has been nailed up and taken down again. Your tongue finds the taste of iron. The last pole stands at the end of a platform.']],
-      panels: [P(0, 0, 360, 200, 'stubble', 0.5, 0.45, 1, 'vig', { live: 1, fall: 0.6 }), P(0, 208, 170, 232, 'post', 0.48, 0.5, 0.74, 'line', { live: 1 }), P(178, 208, 182, 182, 'ring', 0.5, 0.5, 1, 'vig', { live: 1, fall: 0.5, tint: TINT.ring })],
+      panels: [P(0, 0, 360, 200, 'stubble', 0.5, 0.45, 1, 'vig', { live: 1, fall: 0.6 }), P(0, 208, 170, 232, 'post', 0.48, 0.5, 0.74, 'line', { live: 1 }), P(178, 208, 182, 182, 'ring', 0.5, 0.5, 1, 'vig', { fall: 0.5, tint: TINT.ring })],
       text: [{ t: 'it got down', f: 'j', z: 24, x: 190, y: 400, k: 2 }, { t: 'nothing leads to it.', f: 'd', z: 16, y: 452, k: 1 }] },
 
     // --- six
@@ -269,7 +269,7 @@
       cap: 'The hollow is warm, and it fits you. The wood gives against your back like a held breath, and you let your own breath go, and it feels like being forgiven. Above you a red bottle has your name scratched in the glass, in a hand that was old before you were born. The bark has started to close. It comes over your feet, then your knees, and it does not stop at your mouth. You can taste it. Sap, and under the sap, milk. There never was a town. There is an oak that dreams of nine lamps, and now and then it needs somebody to dream them with.\n\nTHE END. You were grown for this.', ch: [['Close your eyes', 'start']],
       panels: [P(20, 10, 320, 320, 'oak', 0.5, 0.5, 1, 'vig', { live: 1, fall: 0.35, tint: TINT.oak })],
       text: [{ t: 'it keeps', f: 'j', z: 36, y: 336, k: 2 }, { t: 'what it is owed', f: 'j', z: 36, y: 374, k: 2 }, { t: 'there never was a town.', f: 'd', z: 16, y: 434, k: 1 }] },
-    reflection: { face: 'm', world: 'woods', end: 1, again: 'It climbs out. It is asked the same three things you were.',
+    reflection: { face: 'm', world: 'woods', acc2: '#5ef0ff', end: 1, again: 'It climbs out. It is asked the same three things you were.',
       cap: 'You kneel and look. The face in the water is yours, and it does not move when you move. Its mouth is open wider than yours goes, and your own jaw aches to match it. It has been down there since the night you went in after her. You remember the cold now. You remember deciding to breathe. What has been walking round the town all evening is only what climbed out. Its hands are on the bank, either side of your knees. They are cold right through, and very strong, and it would like its turn.\n\nTHE END. You drowned a long time ago. Something has to go back in.', ch: [['Let it up', 'start']],
       panels: [P(30, 16, 300, 300, 'drowned', 0.5, 0.5, 1, 'vig', { live: 1, fall: 0.3 })],
       text: [{ t: 'something pale', f: 'j', z: 36, y: 326, k: 1 }, { t: 'crossed the water', f: 'j', z: 36, y: 364, k: 1 }, { t: 'it was you. it was only ever you.', f: 'd', z: 16, y: 426, k: 1 }] },

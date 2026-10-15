@@ -16,16 +16,18 @@ Progress is kept in the browser, not the URL, so nobody can link into the middle
 
 Nothing is drawn by hand or stored as images. `src/engine.js` is a small procedural renderer: each scene is a function that shades every pixel into ink and two accents, then dithers it in scanlines and ordered dots. `src/pages.js` holds the pages, palettes and story graph.
 
-`npm run pack` compresses the engine and pages into the contract's data (about 57 KB). The contract's `uri()` returns a web page that unpacks it and draws the token in the viewer's browser.
+`npm run pack` compresses the engine, the pages and four subset fonts into the contract's data (about 68 KB). The contract's `uri()` returns a web page that unpacks it and draws the token in the viewer's browser, plus a half-size PNG still of the page as the cover image (about 84 KB for all 42, also on-chain).
 
 The site's frames (`src/Ornate.jsx`) and music (`src/sound.js`) are generated the same way: drawn and synthesised live, no assets.
 
 ## Run it
 
 ```
-npm install
+pnpm install
 npm run dev             # local chain (needs Foundry) + contract + site
 npm run dev:site        # site only, minting closed
+npm run fonts           # refetch the subset fonts (when words in the art change)
+npm run covers          # redraw the 42 cover PNGs (when the art changes; needs Chrome)
 npm run pack            # rebuild the on-chain art from src/
 npm run test:contracts
 npm run deploy          # asks for chain and keys; writes .env.local

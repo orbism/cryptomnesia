@@ -13,7 +13,7 @@ let anvil;
 
 if (has('anvil') && has('forge')) {
   if (!(await up())) {
-    anvil = spawn('anvil', ['--silent'], { stdio: 'ignore' });
+    anvil = spawn('anvil', ['--silent', '--state', `${root}contracts/deployments/anvil-state.json`], { stdio: 'ignore' });   // the chain is kept in a file between runs, so what was minted on it is still there next time
     for (let i = 0; i < 40 && !(await up()); i++) await new Promise((r) => setTimeout(r, 150));
     console.log('anvil · started on 127.0.0.1:8545');
   } else console.log('anvil · already running on 127.0.0.1:8545');

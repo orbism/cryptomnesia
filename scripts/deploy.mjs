@@ -53,7 +53,7 @@ try {
   const art = await pack();
   execFileSync('forge', ['build', '--silent'], { cwd: `${root}contracts`, stdio: 'inherit' });
   const { abi, bytecode } = JSON.parse(readFileSync(`${root}contracts/out/Cryptomnesia.sol/Cryptomnesia.json`, 'utf8'));
-  say(`${art.pages.length} pages · art ${art.gz.length} bytes gzipped, in ${art.chunks.length} piece${art.chunks.length > 1 ? 's' : ''}`);
+  say(`${art.pages.length} pages · art ${art.gz.length} bytes gzipped, in ${art.chunks.length} piece${art.chunks.length > 1 ? 's' : ''} · stills ${art.covers.blob.length} bytes, in ${art.covers.chunks.length}`);
 
   // --- new, or carry on with one that stopped
   const recFile = `${root}contracts/deployments/${name}.json`, prev = existsSync(recFile) ? JSON.parse(readFileSync(recFile, 'utf8')) : null;
@@ -83,8 +83,8 @@ try {
     if (owner.toLowerCase() !== account.address.toLowerCase()) die('The owner must be the deployer for now: the owner uploads the art. Hand ownership over afterwards with transferOwnership.');
     args = [title, symbol, price, cap, owner, royaltyTo, bps];
 
-    const gas = (await pub.estimateContractGas({ abi, bytecode: bytecode.object, args, account }).catch(() => 2_800_000n)) + BigInt(art.gz.length * 216 + art.chunks.length * 90_000) + 60_000n + BigInt(art.pages.length * 28_000);
-    say(`\nAbout ${gas} gas at ${Number(formatGwei(fee)).toFixed(2)} gwei: roughly ${eth(gas * fee)}, in ${art.chunks.length + 2} transactions.`);
+    const gas = (await pub.estimateContractGas({ abi, bytecode: bytecode.object, args, account }).catch(() => 2_800_000n)) + BigInt((art.gz.length + art.covers.blob.length) * 216 + (art.chunks.length + art.covers.chunks.length) * 90_000) + 60_000n + BigInt(art.pages.length * 28_000);
+    say(`\nAbout ${gas} gas at ${Number(formatGwei(fee)).toFixed(2)} gwei: roughly ${eth(gas * fee)}, in ${art.chunks.length + art.covers.chunks.length + 2} transactions.`);
     if (name === 'mainnet') { if ((await ask('This is mainnet and costs real ETH. Type mainnet to go on')) !== 'mainnet') die('Stopped. Nothing was sent.'); }
     else if (!(await yes('Go on', true))) die('Stopped. Nothing was sent.');
 
@@ -109,8 +109,20 @@ try {
   if (keccak256(await read('art')) !== want) die('What came back from the chain is not what was sent. Run this again and let it clear and re-upload.');
   const onChain = Number(await read('pageCount')) === art.pages.length && (await Promise.all(art.pages.map((_, i) => read('pages', [BigInt(i)])))).every((p, i) => p === art.pages[i]);
   if (!onChain) await send('page list', () => wallet.writeContract({ address, abi, functionName: 'setPages', args: [art.pages] }));
+  // --- the stills, the same way. what is there is checked by reading every one back
+  const pngAt = (i) => { const end = (n) => (n < 0 ? art.pages.length * 3 : art.covers.blob.readUIntBE(n * 3, 3)); return toHex(art.covers.blob.subarray(end(i - 1), end(i))); };
+  const stillsMatch = async () => (await Promise.all(art.pages.map((_, i) => read('cover', [BigInt(i + 1)])))).every((p, i) => p === pngAt(i));
+  let stored = Number(await read('coverCount'));
+  if (stored > art.covers.chunks.length || (stored === art.covers.chunks.length && !(await stillsMatch()))) {
+    if (!(await yes('The stills stored there are not of this build. Clear them and upload again', true))) die('Stopped.');
+    await send('clear stills', () => wallet.writeContract({ address, abi, functionName: 'clearCovers' }));
+    stored = 0;
+  }
+  if (stored < art.covers.chunks.length) say('\nStoring the stills…');
+  for (let i = stored; i < art.covers.chunks.length; i++) await send(`stills ${i + 1} of ${art.covers.chunks.length}`, () => wallet.writeContract({ address, abi, functionName: 'addCover', args: [toHex(art.covers.chunks[i])] }));
+  if (!(await stillsMatch())) die('The stills that came back from the chain are not what was sent. Run this again and let it clear and re-upload.');
   const uri = await read('uri', [1n]);
-  say(`\nStored and read back: the art matches byte for byte. Token 1 answers with ${uri.length} characters of ${uri.slice(0, 29)}…`);
+  say(`\nStored and read back: the art and all ${art.pages.length} stills match byte for byte. Token 1 answers with ${uri.length} characters of ${uri.slice(0, 29)}…`);
 
   // --- lock
   say('\nLocking makes the art and the page list permanent. It cannot be undone. Leave it until you have looked at a token.');

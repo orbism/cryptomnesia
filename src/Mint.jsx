@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { formatEther } from 'viem';
 import { useAccount, useConnect, useDisconnect, useEnsName, useSwitchChain, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
+import { PAGES } from './lib.js';
 import Ornate from './Ornate.jsx';
 import { ABI, chain, contract, PRICE } from './wallet.js';
 
@@ -37,7 +38,7 @@ export function Mint({ id }) {
   const { writeContractAsync, data: hash, isPending, error, reset } = useWriteContract();
   const { isLoading, isSuccess, error: failed } = useWaitForTransactionReceipt({ hash });
   const [n, setN] = useState(1), [sent, setSent] = useState(1), busy = isPending || isLoading;
-  if (!contract) return <div className="mint"><p className="note">Minting opens when the edition contract is deployed.</p></div>;
+  if (!contract) return <div className="mint"><p className="note">mintable very soon!</p></div>;
   if (!address) return <div className="mint"><p className="note">Connect a wallet to mint this memory · {formatEther(PRICE)} ETH on {chain.name}</p></div>;
   const step = (d) => { reset(); setN((x) => Math.min(99, Math.max(1, x + d))); };
   const mint = async () => {
@@ -47,7 +48,7 @@ export function Mint({ id }) {
       await writeContractAsync({ address: contract, abi: ABI, functionName: 'mint', args: [BigInt(id), BigInt(n)], value: PRICE * BigInt(n), chainId: chain.id });
     } catch { /* said in the line below */ }
   };
-  const says = error ? why(error) : failed ? 'It was sent and it did not go through. Nothing was minted.' : isPending ? 'Waiting on your wallet.' : isLoading ? 'Sent. Waiting for it to be mined.' : isSuccess ? `Minted. ${sent === 1 ? 'One edition of this memory is' : `${sent} editions of this memory are`} yours.` : '';
+  const says = error ? why(error) : failed ? 'It was sent and it did not go through. Nothing was minted.' : isPending ? 'Waiting on your wallet.' : isLoading ? 'Sent. Waiting for it to be mined.' : isSuccess ? <>Minted. <a href={`#editions/${Object.keys(PAGES)[id - 1]}`}>{sent === 1 ? 'One edition of this memory is' : `${sent} editions of this memory are`} yours.</a></> : '';   // the line goes straight to it on the editions page
   return (
     <div className="mint">
       <Ornate className={busy ? 'mintbox busy' : 'mintbox'} role="button" tabIndex={0} onClick={mint} onKeyDown={(e) => e.key === 'Enter' && e.target === e.currentTarget && mint()}>

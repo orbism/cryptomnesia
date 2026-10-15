@@ -37,6 +37,8 @@ section { display: grid; gap: 18px; padding-block: 34px; border-bottom: 1px soli
 .card.dropped { opacity: 0.28; }
 .card.dropped canvas { filter: grayscale(1); }
 .card p { font-size: 15px; line-height: 1.45; color: var(--dim); }
+.dl { justify-self: start; padding: 0; border: 0; background: none; color: var(--dim); font: inherit; font-size: 13px; cursor: pointer; }
+.dl:hover:not(:disabled) { color: #ff2a2a; }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
 .keep { background: none; border: 1px solid var(--rule); padding: 7px 10px; color: var(--bone); }
 .keep[aria-pressed="false"] { color: var(--blood); border-color: var(--blood); }
@@ -78,6 +80,56 @@ section { display: grid; gap: 18px; padding-block: 34px; border-bottom: 1px soli
 .bar output { color: var(--dim); }
 #picktext { width: 100%; max-width: 900px; height: 150px; background: var(--ground); color: var(--bone); border: 1px solid var(--rule); font: 12px/1.5 var(--mono); padding: 10px; }
 
+/* the tokens: one card per mintable page, in token order; a click blows it up */
+.grid.nft { grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 24px 18px; }
+.nft button { display: grid; gap: 10px; padding: 0; border: 0; background: none; text-align: left; }
+.nft h3 { font: 400 18px/1.2 var(--dot); }
+.nft h3 span { color: var(--dim); }
+.nft button:hover h3 { color: var(--lamp); }
+#lb { position: fixed; inset: 0; z-index: 9; display: grid; place-items: center; align-content: center; gap: 14px; padding: 20px; background: rgba(0, 0, 0, 0.92); cursor: zoom-out; }
+#lb[hidden] { display: none; }
+#lb canvas { width: auto; height: min(calc(100dvh - 110px), calc((100vw - 40px) * var(--ar))); max-width: 100%; aspect-ratio: 1 / var(--ar); }
+#lb h3 { font: 400 26px/1.2 var(--dot); }
+
+/* the routes: every page as a box in its row, every choice an arrow; beside it, the page being read */
+#p-routes { margin-inline: calc(50% - min(50vw - 20px, 880px)); }
+.routes { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; align-items: start; }
+.map { overflow-x: auto; }
+.map svg { display: block; width: 100%; min-width: 900px; height: auto; font: 14.5px var(--dot); }
+.map .col { fill: var(--dim); font: 500 10px var(--mono); letter-spacing: 0.09em; text-transform: uppercase; }
+.map path { fill: none; stroke: #3a4652; stroke-width: 1.2; marker-end: url(#m-dim); transition: stroke 0.2s, opacity 0.2s; }
+.map path.re { stroke: #2f6f66; stroke-dasharray: 2 4; marker-end: url(#m-re); }
+.map path.round { stroke: #7a1a20; stroke-dasharray: 6 4; marker-end: url(#m-round); }
+.map.focus path { opacity: 0.5; }
+.map path.in { opacity: 1; stroke: var(--bone); marker-end: url(#m-in); }
+.map path.out { opacity: 1; stroke: var(--lamp); stroke-width: 2; marker-end: url(#m-out); }
+.map path.round.out { stroke: var(--blood); marker-end: url(#m-roundhot); }
+.map g[data-k] { cursor: pointer; }
+.map g[data-k] rect { stroke-width: 1; stroke-opacity: 0.55; }
+.map g[data-k] text { fill: var(--dim); }
+.map g[data-k] text tspan { fill: #5b636c; }
+.map g.read text { fill: var(--bone); }
+.map g[data-k]:hover rect { stroke-opacity: 1; }
+.map g.at rect { stroke: var(--lamp); stroke-opacity: 1; stroke-width: 2.5; }
+.map g.at text { fill: var(--lamp); }
+.key { display: flex; gap: 18px; flex-wrap: wrap; color: var(--dim); font: 500 11px/1.3 var(--mono); letter-spacing: 0.09em; text-transform: uppercase; }
+.key i { display: inline-block; width: 26px; vertical-align: middle; margin-right: 6px; border-top: 2px solid; }
+.reader { position: sticky; top: 16px; max-height: calc(100vh - 100px); overflow-y: auto; display: grid; gap: 12px; background: var(--panel); border: 1px solid var(--rule); padding: 16px; }
+.reader h2 { font-size: 24px; }
+.reader .lead { color: var(--dim); font-style: italic; }
+.reader .cap { font: 16px/1.4 var(--dot); }
+.reader .think { font: 15px/1.3 var(--dot); color: var(--pa, var(--lamp)); }
+.reader ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.reader [data-go] { width: 100%; display: grid; gap: 2px; text-align: left; background: none; border: 1px solid var(--rule); padding: 8px 10px; font: 15px/1.3 var(--dot); color: var(--pa, var(--lamp)); }
+.reader [data-go]:hover { border-color: var(--lamp); }
+.reader [data-go] span { font: 500 10.5px/1.3 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+.reader [data-go] span b { color: var(--blood); font-weight: 500; }
+.reader .trail { display: flex; flex-wrap: wrap; gap: 4px 8px; font: 500 10.5px/1.5 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); }
+.reader .trail button { background: none; border: 0; padding: 0; color: var(--dim); }
+.reader .trail button:hover { color: var(--lamp); }
+.reader .flip { justify-self: start; background: none; border: 1px solid var(--rule); padding: 6px 10px; color: var(--dim); font: 500 10.5px/1.3 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; }
+@media (max-width: 1000px) { .routes { grid-template-columns: minmax(0, 1fr); } .reader { position: static; max-height: none; } }
+
 @media (max-width: 760px) { header, .route { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .page ol li::after { animation: none !important; } }
 </style>
@@ -92,6 +144,8 @@ section { display: grid; gap: 18px; padding-block: 34px; border-bottom: 1px soli
         <button role="tab" id="tab-art" aria-controls="p-art">Art</button>
         <button role="tab" id="tab-story" aria-controls="p-story">Story</button>
         <button role="tab" id="tab-build" aria-controls="p-build">Build</button>
+        <button role="tab" id="tab-tokens" aria-controls="p-tokens">Tokens</button>
+        <button role="tab" id="tab-routes" aria-controls="p-routes">Routes</button>
       </div>
     </div>
     <div id="hero"></div>
@@ -269,7 +323,22 @@ section { display: grid; gap: 18px; padding-block: 34px; border-bottom: 1px soli
       </dl>
     </section>
   </main>
+
+  <main id="p-tokens" role="tabpanel" aria-labelledby="tab-tokens" hidden>
+    <section><span class="label">Tokens</span><h2>Every page, as it mints</h2><p class="lede" id="tokcount"></p><div class="grid nft" id="tokens"></div></section>
+  </main>
+
+  <main id="p-routes" role="tabpanel" aria-labelledby="tab-routes" hidden>
+    <section>
+      <span class="label">Routes</span><h2>Every way through</h2>
+      <p class="lede" id="routecount"></p>
+      <div class="key"><span><i style="border-color: #3a4652"></i>a choice</span><span><i style="border-color: #2f6f66; border-top-style: dotted"></i>a choice on a return</span><span><i style="border-color: #7a1a20; border-top-style: dashed"></i>a road round, back to dusk</span><span>↺ an ending: back to Anamnesis</span></div>
+      <div class="routes"><div class="map" id="map"></div><aside class="reader" id="reader"></aside></div>
+    </section>
+  </main>
 </div>
+
+<div id="lb" hidden><canvas></canvas><h3></h3></div>
 
 <div class="bar">
   <output id="count"></output>
@@ -281,7 +350,7 @@ section { display: grid; gap: 18px; padding-block: 34px; border-bottom: 1px soli
 <script src="src/engine.js"></script>
 <script src="src/pages.js"></script>
 <script>
-const { PAGES, QUIZ, ENTRIES, PW, PH, pal, walks, repeats } = DFDATA;
+const { PAGES, QUIZ, ENTRIES, RECALL, PW, PH, pal, walks, repeats } = DFDATA;
 const NEWS = [
   ['works', 'The works', 'From the quarry road. Shut forty years. One bay lit, the stack drawing.'],
   ['whistle', 'Yard clock', 'The boiler-house corner. No hands on the clock. The whistle goes anyway.'],
@@ -381,15 +450,36 @@ function build(p) {
   const pg = p.spec.page && PAGES[p.spec.page], n = p.spec.n || 200, h = p.spec.h || n;
   const page = pg ? { ...pg, w: PW, h: PH } : p.spec.panels ? p.spec : { w: n, h, panels: [{ x: 0, y: 0, w: n, h, c: [0.5, 0.5], z: 1, live: 1, ...p.spec }] };
   const colors = pal(pg || page.panels[0].s);
+  p.page = page; p.colors = colors;
   p.step = DF.mount(p.cv, page, colors);
   const el = p.cv.closest('.page'); if (el) { el.style.setProperty('--pg', colors[0]); el.style.setProperty('--pa', colors[2]); }
 }
 function pump() { const p = queue.shift(); if (!p) return; build(p); setTimeout(pump, 0); }
 function mountAll() {
-  for (const cv of $$('canvas[data-spec]')) { const p = { cv, spec: JSON.parse(cv.dataset.spec) }; cv.removeAttribute('data-spec'); plates.push(p); queue.push(p); }
+  for (const cv of $$('canvas[data-spec]')) { const p = { cv, spec: JSON.parse(cv.dataset.spec) }; cv.removeAttribute('data-spec'); plates.push(p); queue.push(p); if (!cv.closest('[data-big]')) cv.after(saver(p)); }
+}
+// under every picture, a way to keep it: the same looping GIF the site hands out, made by the site's own encoder
+function saver(p) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'dl'; b.textContent = '↓ download';
+  b.onclick = async (e) => {
+    e.stopPropagation(); b.disabled = true; b.textContent = 'drawing…';
+    try {
+      if (!p.page) build(p);
+      const { gif } = await import('./src/gif.js'), data = await gif(p.page, p.colors), filename = `cryptomnesia-${p.spec.page || p.spec.s || 'plate'}.gif`, dl = await window.claude?.use?.('downloads');
+      if (dl) await dl.save({ filename, data });                                  // on claude.ai the viewer is asked first
+      else { const a = document.createElement('a'); a.href = URL.createObjectURL(data); a.download = filename; a.click(); URL.revokeObjectURL(a.href); }
+      b.textContent = '↓ download';
+    } catch (err) { b.textContent = err?.code === 'declined' ? '↓ download' : 'could not save it'; }
+    b.disabled = false;
+  };
+  return b;
 }
 let tick = 0;
-if (!matchMedia('(prefers-reduced-motion: reduce)').matches) setInterval(() => { tick++; for (const p of plates) p.step?.(tick); }, 220);
+const live = {};   // plates mounted on demand (the blown-up one, the page being read), stepped with the rest
+// a page's own moving plate on a fresh canvas, in place of the one there
+const plate = (old, k) => { const c = document.createElement('canvas'); old.replaceWith(c); return DF.mount(c, { ...PAGES[k], w: PW, h: PH }, pal(PAGES[k])); };
+if (!matchMedia('(prefers-reduced-motion: reduce)').matches) setInterval(() => { tick++; for (const p of plates) p.step?.(tick); for (const f of Object.values(live)) f?.(tick); }, 220);
 
 // --- markup ---
 const cv = (spec) => `<canvas data-spec='${JSON.stringify(spec)}'></canvas>`;
@@ -400,6 +490,99 @@ $('#devices').innerHTML = DEVICES.map(([t, d]) => `<article class="card" data-pi
 $('#entries').innerHTML = Object.entries(ENTRIES).map(([k, e]) => `<article class="card" data-pick="Entry:${e.name}">${cv({ s: k })}<h3>${e.name} <span class="rec label">· new</span></h3><p>${e.where}</p><p>${e.bend}</p></article>`).join('');
 $('#quiz').innerHTML = QUIZ.map((q, i) => `<div>${cv(q.scene)}<p class="q">${q.q}</p>${q.a.map(([t, k]) => `<button type="button" data-q="${i}" data-k="${k}" aria-pressed="false">${t}</button>`).join('')}</div>`).join('');
 $('#hero').innerHTML = pageMock('harrow');
+const num = (i) => String(i + 1).padStart(2, '0');
+$('#tokens').innerHTML = Object.keys(PAGES).map((k, i) => `<article class="card"><button type="button" data-big="${k}">${cv({ page: k })}<h3><span>${num(i)} ·</span> ${PAGES[k].title}</h3></button></article>`).join('');
+$('#tokcount').textContent = `${Object.keys(PAGES).length} tokens, one per page, numbered as the contract numbers them. Click one to see it large.`;
+// the blown-up one: its own live plate, gone again on any click or Escape
+function blowUp(k) {
+  const lb = $('#lb');
+  lb.style.setProperty('--ar', PH / PW);
+  $('h3', lb).innerHTML = `<span class="label">${num(Object.keys(PAGES).indexOf(k))}</span> ${PAGES[k].title}`;
+  live.big = plate($('canvas', lb), k);
+  lb.hidden = false;
+}
+const shut = () => { $('#lb').hidden = true; live.big = null; };
+$('#lb').addEventListener('click', shut);
+addEventListener('keydown', (e) => e.key === 'Escape' && shut());
+
+// --- routes. columns: Anamnesis, the five rows, then the ends. edges: [from, to, kind, choice] ---
+const Q = 'anamnesis', K = Object.keys(PAGES), name = (k) => (k === Q ? 'Anamnesis' : PAGES[k].title), no = (k) => (k === Q ? '' : num(K.indexOf(k)));
+const edges = Object.values(ENTRIES).map((e) => [Q, e.start, '', [e.name, e.start, `You are ${e.name}. ${e.where} ${e.bend}`]]);
+for (const k of K) {
+  for (const c of PAGES[k].ch) if (PAGES[c[1]]) edges.push([k, c[1], c[3] ? 'round' : '', c]);
+  for (const c of PAGES[k].re?.ch || []) edges.push([k, c[1], c[3] ? 'round re' : 're', c]);
+}
+const depth = { [Q]: 0 };
+{ let ring = Object.values(ENTRIES).map((e) => e.start), d = 1;   // the fewest choices in: a choice leads one row on, so this is the page's row
+  while (ring.length) { for (const k of ring) depth[k] = d; d++; ring = [...new Set(ring.flatMap((k) => PAGES[k].ch.filter((c) => !c[3] && PAGES[c[1]] && !PAGES[c[1]].end && depth[c[1]] == null).map((c) => c[1])))]; } }
+const last = Math.max(...Object.values(depth)) + 1;
+for (const k of K) if (PAGES[k].end) depth[k] = last;
+const cols = Array.from({ length: last + 1 }, (_, d) => [Q, ...K].filter((k) => depth[k] === d));
+// order each column by where its neighbours sit, sweeping right then left, so the arrows cross as little as they can
+{ const pos = {}, set = () => cols.forEach((c) => c.forEach((k, i) => (pos[k] = (i + 0.5) / c.length))), mean = (l) => (l.length ? l.reduce((a, b) => a + pos[b], 0) / l.length : 0.5);
+  const plain = edges.filter((e) => !e[2]);
+  set();
+  for (let n = 0; n < 8; n++) for (const back of [false, true]) {
+    for (const c of back ? [...cols].reverse() : cols) { const w = Object.fromEntries(c.map((k) => [k, mean(plain.filter((e) => (back ? e[0] : e[1]) === k).map((e) => (back ? e[1] : e[0])))])); c.sort((a, b) => w[a] - w[b]); set(); }
+  } }
+const NW = 162, NH = 34, CW = 200, RH = 46, TOP = 34, most = Math.max(...cols.map((c) => c.length)), rounds = edges.filter((e) => e[2].includes('round')).length;
+const W = cols.length * CW - (CW - NW) + 20, H = TOP + most * RH + 30 + rounds * 9, at = {};
+cols.forEach((c, d) => c.forEach((k, i) => (at[k] = { x: 10 + d * CW, y: TOP + (most - c.length) * RH / 2 + i * RH })));
+const LABEL = ['the questions', 'dusk · nine lit', 'eight lit', 'seven', 'six', 'five', 'the ends'];
+const curve = ([a, b, kind], i) => {
+  const p = at[a], q = at[b];
+  if (kind.includes('round')) { const y = TOP + most * RH + 14 + i * 9, sx = p.x + NW / 2, tx = q.x + NW / 2; return `M${sx},${p.y + NH} V${y - 6} Q${sx},${y} ${sx - 6},${y} H${tx + 6} Q${tx},${y} ${tx},${y - 6} V${q.y + NH + 4}`; }
+  const sx = p.x + NW, sy = p.y + NH / 2, tx = q.x - 4, ty = q.y + NH / 2, m = (tx - sx) / 2;
+  return `M${sx},${sy} C${sx + m},${sy} ${tx - m},${ty} ${tx},${ty}`;
+};
+const esc2 = (t) => esc(t || '');
+const mk = (id, c) => `<marker id="${id}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="${c}" stroke="none" style="marker-end:none"/></marker>`;
+let ri = 0;
+$('#map').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Every page and every choice"><defs>${mk('m-dim', '#3a4652')}${mk('m-re', '#2f6f66')}${mk('m-round', '#7a1a20')}${mk('m-in', '#d3ccba')}${mk('m-out', '#ff7a1a')}${mk('m-roundhot', '#e3202c')}</defs>`
+  + cols.map((c, d) => `<text class="col" x="${10 + d * CW}" y="14">${LABEL[d] || ''}</text>`).join('')
+  + edges.map((e, i) => `<path data-e="${i}" class="${e[2]}" d="${curve(e, e[2].includes('round') ? ri++ : 0)}"><title>${esc2(name(e[0]))} → ${esc2(e[3][0])} → ${esc2(name(e[1]))}</title></path>`).join('')
+  + [Q, ...K].map((k) => { const c = k === Q ? ['#07090c', '', '#8a8f95'] : pal(PAGES[k]); return `<g data-k="${k}" transform="translate(${at[k].x},${at[k].y})"><rect width="${NW}" height="${NH}" rx="${PAGES[k]?.end ? 14 : 2}" fill="${c[0]}" stroke="${c[2]}"/><text x="10" y="${NH / 2 + 5}"><tspan>${no(k)}</tspan> ${esc2(name(k))}${PAGES[k]?.end ? ' <tspan>↺</tspan>' : ''}</text></g>`; }).join('') + '</svg>';
+
+// the reader: one page at a time, told as the game tells it. walk = this time through, since the questions; read = every page ever opened here
+const RK = 'cryptomnesia-routes-read';
+let read = {}, walk = [], now = null;
+try { read = JSON.parse(localStorage.getItem(RK) || '{}'); } catch {}
+function readAt(k, { lead = null, again = false, fresh = false } = {}) {
+  if (fresh || k === Q) walk = [];
+  walk.push({ k, again }); now = { k, again };
+  read[k] = 1; try { localStorage.setItem(RK, JSON.stringify(read)); } catch {}
+  const pg = PAGES[k], tell = again && pg?.re ? pg.re : pg, r = $('#reader');
+  const ch = k === Q ? edges.filter((e) => e[0] === Q).map((e) => e[3]) : tell.ch;
+  const where = (to) => (to === 'start' ? 'back to Anamnesis' : `${no(to)} ${name(to)}`);
+  r.innerHTML = `<span class="label">${k === Q ? 'the questions' : `${no(k)} · ${pg.end ? 'an ending' : LABEL[depth[k]]}${again ? ' · a return' : ''}`}</span><h2>${esc2(name(k))}</h2>`
+    + (pg ? '<canvas></canvas>' : '') + (lead ? `<p class="lead">${esc2(lead)}</p>` : '')
+    + `<p class="cap">${k === Q ? 'Three questions, dealt from a pack, decide which of five you are. Each one starts somewhere else.' : esc2(tell.cap)}</p>`
+    + (pg && (again ? RECALL[0] : pg.think) ? `<p class="think">${esc2(again ? RECALL[0] : pg.think)}</p>` : '')
+    + `<ol>${ch.map((c, i) => `<li><button type="button" data-go="${i}">${esc2(c[0])}<span>→ ${esc2(where(c[1]))}${c[3] ? ' · the road round' : ''}${PAGES[c[1]] && !read[c[1]] ? ' · <b>unread</b>' : ''}</span></button></li>`).join('')}</ol>`
+    + (pg?.re ? `<button type="button" class="flip" data-flip>${again ? 'read it as a first time' : 'read it as a return'}</button>` : '')
+    + `<div class="trail">${walk.map((w, i) => `<button type="button" data-back="${i}">${esc2(name(w.k))}${w.again ? ' (again)' : ''}</button>`).join(' → ')}</div>`;
+  r.style.setProperty('--pa', pg ? pal(pg)[2] : '');
+  live.read = pg ? plate($('canvas', r), k) : null;
+  now.ch = ch;
+  paintMap();
+  const n = K.filter((x) => read[x]).length, e = K.filter((x) => PAGES[x].end), ne = e.filter((x) => read[x]).length;
+  $('#routecount').textContent = `${K.length} pages, ${e.length} of them ends, ${edges.length} arrows. Click any box to read it, then keep choosing. Read so far: ${n} of ${K.length} pages, ${ne} of ${e.length} ends.`;
+}
+function paintMap() {
+  const m = $('#map'), outs = edges.map((e, i) => (e[0] === now.k && (now.k === Q || !!e[2].includes('re') === (now.again && !!PAGES[now.k].re)) ? i : -1));
+  m.classList.add('focus');
+  for (const g of $$('g[data-k]', m)) { g.classList.toggle('at', g.dataset.k === now.k); g.classList.toggle('read', !!read[g.dataset.k]); }
+  for (const p of $$('path[data-e]', m)) { const i = +p.dataset.e; p.classList.toggle('out', outs.includes(i)); p.classList.toggle('in', !outs.includes(i) && edges[i][1] === now.k); }
+}
+$('#reader').addEventListener('click', (e) => {
+  const g = e.target.closest('[data-go]'), b = e.target.closest('[data-back]');
+  if (g) { const c = now.ch[+g.dataset.go]; c[1] === 'start' ? readAt(Q, { lead: PAGES[now.k].again }) : readAt(c[1], { lead: c[2], again: !!c[3] || walk.some((w) => w.k === c[1]) }); }
+  if (b) { const w = walk[+b.dataset.back]; walk = walk.slice(0, +b.dataset.back); readAt(w.k, { again: w.again }); }
+  if (e.target.closest('[data-flip]')) { walk.pop(); readAt(now.k, { again: !now.again }); }
+  if ((g || b) && $('#reader').getBoundingClientRect().top < 0) $('#reader').scrollIntoView({ behavior: 'smooth' });
+});
+$('#map').addEventListener('click', (e) => { const g = e.target.closest('g[data-k]'); if (g) readAt(g.dataset.k, { fresh: true }); });
+readAt(Q);
 {
   const w = walks(), n = w.map((p) => p.length - 1), bad = w.filter((p) => repeats(p).length).length, ends = Object.keys(PAGES).filter((k) => PAGES[k].end);
   $('#walks').textContent = `${Object.keys(PAGES).length} pages, ${ends.length} ends, ${w.length} different walks from the five ways in. Shortest ${Math.min(...n)} choices, longest ${Math.max(...n)}. Walks that show a picture twice without it being a return: ${bad}.`;
@@ -446,8 +629,9 @@ function save() {
 })();
 
 document.addEventListener('click', (e) => {
-  const k = e.target.closest('.toggle'), t = e.target.closest('[role=tab]'), q = e.target.closest('[data-q]');
+  const k = e.target.closest('.toggle'), z = e.target.closest('[data-big]'), t = e.target.closest('[role=tab]'), q = e.target.closest('[data-q]');
   if (k) { const id = k.closest('[data-pick]').dataset.pick; state.drop[id] ? delete state.drop[id] : (state.drop[id] = 1); paint(); save(); }
+  if (z) blowUp(z.dataset.big);
   if (t) show(t.getAttribute('aria-controls').slice(2), true);
   if (q) {
     for (const b of $$(`[data-q="${q.dataset.q}"]`)) b.setAttribute('aria-pressed', b === q);
@@ -466,8 +650,9 @@ function show(id, push) {
   for (const t of $$('[role=tab]')) t.setAttribute('aria-selected', t.getAttribute('aria-controls') === 'p-' + id);
   if (push) { try { history.replaceState(null, '', '#' + id); } catch {} scrollTo(0, 0); }
 }
-show(['story', 'build'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'art');
+show(['story', 'build', 'tokens', 'routes'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'art');
 mountAll(); paint();
+queue.sort((a, b) => !!b.cv.offsetParent - !!a.cv.offsetParent);   // the open tab's plates draw first
 // in-plate words need their fonts before the first rasterise
 DF.fontsReady().then(pump);
 </script>

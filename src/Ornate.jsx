@@ -11,10 +11,10 @@ import { still } from './Plate.jsx';
 const TICK = 70, TAU = Math.PI * 2, PER = 64;
 const GOLD = [112, 90, 58], LIT = [172, 144, 96], MIST = [32, 56, 54], VINE = [38, 86, 82], HUES = [[124, 36, 40], [42, 90, 86], [124, 76, 34], [78, 66, 118]];
 const LINE = [0, 2, 1, 3], scan = (x, y) => (LINE[y & 3] * 4 + LINE[x & 3] + 0.5) / 16, hash = (n) => { const x = Math.sin(n * 127.1) * 43758.5453; return x - Math.floor(x); };
-// how much frame each size of thing gets, least first; the fourth is the one a page's title wears, slighter than the least, tighter wound, and with a star at the middle of each side. b = the room it is given, a = how far in the line runs, g = the step from one winding to the next, R = how big the corner winding is, clear = the room left at its heart,
+// how much frame each size of thing gets, least first; the fourth is the one a page's title wears, slighter than the least, tighter wound, and with a star at the middle of each side; the fifth, the barest, is for a tab. b = the room it is given, a = how far in the line runs, g = the step from one winding to the next, R = how big the corner winding is, clear = the room left at its heart,
 // hw = how far the mist reaches off the line; then the vine: amp = how far it swings, curl = how big its curls, per = how long one swing; star = how big the stars at the middles are. deco = no vine but that many ruled lines, in its place.
 // k = where the heart of a corner lies, in from both edges
-export const LEVELS = [{ b: 16, g: 3, a: 9, R: 11, clear: 5, hw: 5 }, { b: 24, g: 3, a: 11, R: 16, clear: 6, hw: 9, amp: 2, curl: 4, per: 28, star: 6 }, { b: 48, g: 3, a: 18, R: 27, clear: 12, hw: 18, deco: 6, star: 12 }, { b: 12, g: 2, a: 7, R: 7, clear: 3, hw: 4, star: 4 }];
+export const LEVELS = [{ b: 16, g: 3, a: 9, R: 11, clear: 5, hw: 5 }, { b: 24, g: 3, a: 11, R: 16, clear: 6, hw: 9, amp: 2, curl: 4, per: 28, star: 6 }, { b: 48, g: 3, a: 18, R: 27, clear: 12, hw: 18, deco: 6, star: 12 }, { b: 12, g: 2, a: 7, R: 7, clear: 3, hw: 4, star: 4 }, { b: 8, g: 2, a: 4, R: 4, clear: 2, hw: 2 }];
 for (const L of LEVELS) L.k = L.a + L.R - L.g;
 
 // the frame for a box w by h: the mist as a list of pixels (where, how thick, where on its row's slide, what it takes to light it) and the line work as another (where, what, how far along, whose).
@@ -97,7 +97,7 @@ function draw(px, { hi, hb, hp, ht, li, lc, lp, lf, reach }, ang, heat) {
   }
 }
 
-// level = how much frame, 1 to 3, or 4 for a title (LEVELS). live = the attention it has with nobody on it (a thing brought up over the page has some just by being there)
+// level = how much frame, 1 to 3, or 4 for a title, 5 for a tab (LEVELS). live = the attention it has with nobody on it (a thing brought up over the page has some just by being there)
 export default function Ornate({ as: Tag = 'div', level = 1, live = 0, className = '', children, ...rest }) {
   const box = useRef(null), cv = useRef(null);
   useEffect(() => {

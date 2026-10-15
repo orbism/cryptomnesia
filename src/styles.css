@@ -85,16 +85,15 @@ footer button:hover, footer a:hover { color: #ff2a2a; }
 .shelf > .note { font-size: 18px; color: var(--bone); }
 .shelf ol, .shelf ul { list-style: none; margin: 0; padding: 0; }
 /* eight to a column, then the next column; every other one a shade off its neighbours, and the one under the pointer a shade off again */
-.shelf ol { margin-left: -10px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 300px); gap: 0 28px; }
-.shelf ol > li { display: grid; grid-template-columns: 72px 1fr auto; gap: 0 16px; align-items: center; padding: 6px 10px; transition: background 0.2s ease; }
-.shelf ol > li:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
-.shelf ol > li:hover { background: rgba(255, 255, 255, 0.07); }
-.shelf ol > li > button:not(.thumb) { display: grid; grid-template-columns: 4ch 1fr auto; }
+.shelf > ol { margin-left: -10px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 300px); gap: 0 28px; }
+.shelf > ol > li { display: grid; grid-template-columns: 72px 1fr auto; gap: 0 16px; align-items: center; padding: 6px 10px; transition: background 0.2s ease; }
+.shelf > ol > li:nth-child(even) { background: rgba(255, 255, 255, 0.025); }
+.shelf > ol > li:hover { background: rgba(255, 255, 255, 0.07); }
+.shelf > ol > li > button:not(.thumb) { display: grid; grid-template-columns: 4ch 1fr auto; }
 .shelf .thumb { display: block; line-height: 0; }
 .shelf .thumb canvas { width: 72px; height: auto; }   /* this small, smoothed reads better than hard pixels */
 .shelf a { color: var(--ink); font-size: 14px; text-decoration: none; transition: color 0.5s ease; }
 .shelf a:hover { color: #ff2a2a; }
-.shelf ul { grid-column: 2 / -1; padding: 2px 0 6px 4ch; color: var(--bone); font-size: 15px; }
 /* something brought up over the page in the ornate frame: a question, or one minted page to look at (wide) */
 .veil { position: fixed; z-index: 3; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, 0.85); }
 .frame { max-width: min(48ch, 90vw); padding: 30px 34px 26px; background: #000; color: var(--bone); line-height: 1.6; }
@@ -104,9 +103,31 @@ footer button:hover, footer a:hover { color: #ff2a2a; }
 .frame .row button:hover { color: #ff2a2a; }
 /* the page is as tall as the window lets it be once the frame (--f deep) has had its share, and the frame stands ten pixels off it. the way out is the stone at the heart of the top right corner (--k in) */
 .frame.wide { max-width: none; padding: 10px; line-height: 0; }
-.frame.wide .plate { width: min(calc((100vh - 2 * var(--f) - 70px) * var(--ar)), calc(100vw - 2 * var(--f) - 70px)); }
-.frame .shut { position: absolute; z-index: 2; top: calc(var(--k) - var(--f) - 10px); right: calc(var(--k) - var(--f) - 10px); width: 21px; height: 21px; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); background: #ff2a2a; color: #000; font: bold 11px/21px ui-monospace, Menlo, monospace; text-align: center; transition: background 0.5s ease, color 0.5s ease; }
+.veil:has(.side) { grid-auto-flow: column; place-content: center; gap: 30px; }
+.frame.wide .plate { width: min(calc((100vh - 2 * var(--f) - 70px) * var(--ar)), calc(100vw - 2 * var(--f) - 440px)); }
+/* beside the frame, what has become of it: who keeps it, who remembered it first, and every hand it has passed through since */
+.log { display: grid; gap: 14px; align-content: start; width: 340px; max-height: calc(100vh - 2 * var(--f) - 70px); overflow-y: auto; line-height: 1.45; font-size: 17px; color: var(--bone); }
+.log .title { font-size: 25px; }
+.log .sea { justify-self: start; color: var(--accent); display: flex; gap: 6px; align-items: center; font-size: 15px; }
+.log button.sea:hover { color: #ff2a2a; }
+.log span.sea { color: #7d858d; opacity: 0.5; }
+.log .addr { color: var(--bone); text-decoration: underline dotted #7d858d; text-underline-offset: 4px; transition: color 0.5s ease; }
+.log .addr:hover { color: #ff2a2a; }
+.log ol, .log ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.log h3 { margin: 6px 0 0; color: #7d858d; font-size: 14px; font-weight: normal; letter-spacing: 0.08em; text-transform: uppercase; }
+.log small { display: block; color: #7d858d; font-size: 14px; }
+.log a, .tabs button, .shelf .note a { color: var(--accent); text-decoration: none; transition: color 0.5s ease; }
+.log a:hover, .tabs button:hover, .shelf .note a:hover { color: #ff2a2a; }
+.tabs { display: flex; gap: 12px; margin: 0; color: #7d858d; }
+.tabs .ornate { padding: 4px 10px; font-size: 15px; }
+.tabs button.on { color: #ff2a2a; font-weight: bold; }
+.frame .shut { --o: calc(var(--k) - var(--f) - 10px); position: absolute; z-index: 2; top: var(--o); right: var(--o); display: grid; place-items: center; width: 21px; height: 21px; padding: 0; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); background: #ff2a2a; color: #000; font: bold 11px/21px ui-monospace, Menlo, monospace; transition: background 0.5s ease, color 0.5s ease; }
 .frame .shut:hover { background: #000; color: #ff2a2a; }
+.frame .shut.tl, .frame .shut.bl { right: auto; left: var(--o); }
+.frame .shut.br, .frame .shut.bl { top: auto; bottom: var(--o); }
+.frame .shut.soon { opacity: 0.35; }
+.frame .shut.soon:hover { background: #ff2a2a; color: #000; }
+.frame .shut:disabled { cursor: default; animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 
 @media (max-width: 820px) {
@@ -117,13 +138,18 @@ footer button:hover, footer a:hover { color: #ff2a2a; }
   header nav .links span { display: none; }
   /* on a phone the picture has the screen, whole, and the telling is a sheet kept folded under it with its title showing. touch the picture or the title and it comes up over the picture; touch again and it goes */
   .scene { --wide: 100%; grid-template-columns: minmax(0, 1fr); align-items: start; justify-items: center; padding: 8px 12px 120px; }
-  .scene:has(.sheet) { min-height: 0; height: calc(100dvh - 162px); align-content: center; padding: 0; }   /* a story page: the picture edge to edge, as big as the room between the header and the folded sheet allows, and centred in it */
+  .scene:has(.drawer) { min-height: 0; height: calc(100dvh - 162px); align-content: center; padding: 0; }   /* a story page: the picture edge to edge, as big as the room between the header and the folded sheet allows, and centred in it */
   .plate { width: min(100vw, calc((100dvh - 166px) * var(--ar))); height: auto; }
   .plate.small { width: min(320px, 70vw, calc((100dvh - 420px) * var(--ar))); margin: 0 auto; }
-  .words.sheet { position: fixed; z-index: 0; left: 0; right: 0; bottom: 38px; width: auto; min-height: 0; max-height: calc(100dvh - 90px); overflow-y: auto; gap: 10px; align-content: start; padding: 8px 16px 14px; background: var(--ground); border-top: 1px solid var(--ink); font-size: 16px; line-height: 1.32; transform: translateY(calc(100% - 68px)); transition: transform 0.35s ease; }
-  .words.sheet.open { transform: none; }
-  .words.sheet .title { cursor: pointer; }
-  .words.sheet .mint { margin-top: 4px; }
+  /* a drawer: kept folded at the foot of the screen with its title showing, and drawn up over the picture when asked. the story's telling is one, and so is a minted page's history */
+  .drawer { position: fixed; z-index: 0; left: 0; right: 0; bottom: var(--below, 38px); width: auto; min-height: 0; max-height: calc(100dvh - 90px); overflow-y: auto; gap: 10px; align-content: start; padding: 8px 16px 14px; background: var(--ground); border-top: 1px solid var(--ink); font-size: 16px; line-height: 1.32; transform: translateY(calc(100% - 68px)); transition: transform 0.35s ease; }
+  .drawer.open { transform: none; }
+  .drawer .title { cursor: pointer; }
+  .words.drawer .mint { margin-top: 4px; }
+  .veil .drawer { --below: 0px; z-index: 3; width: auto; max-height: calc(100dvh - 40px); background: #000; }
+  .veil:has(.side) { grid-auto-flow: row; }
+  .log { width: auto; }
+  .frame.wide .plate { width: min(calc(100vw - 2 * var(--f) - 40px), calc((100dvh - 2 * var(--f) - 170px) * var(--ar))); }
   .art { cursor: pointer; }
 }
 @media (prefers-reduced-motion: reduce) { .choices li.on button::after, .ask::after, header h1 { animation: none; } }

@@ -1874,20 +1874,25 @@
 
   // --- drowned: kneeling at the pond. the face in the water is yours. it has its hands on the bank
   S.drowned = (u, v, f, o) => {
-    const wob = 0.011 * sin(v * 42 + f * 1.57) + 0.007 * sin(u * 30 + v * 22 - f * 1.57), x = u - 0.5 + wob * (1 - 0.7 * ss(0.6, 0.85, v)), y = v - 0.4 + wob * 0.5, jaw = 0.15 - 0.09 * ss(0.02, 0.24, y), dr = drape(u, v, f, 40, 0.14 + 1.6 * (u - 0.5) * (u - 0.5));
-    let L = 0.07 + (fbm(u * 3, v * 16 + f * 0.2) > 0.6 ? 0.16 : 0), A = 0, M = 1;
+    // eight frames, everything only ever moving one way, so the loop has no seam and nothing runs backwards; the ninth is the first with its eyes open.
+    // the face is bent only by the rings going out from the two wrists, as water is
+    const p = (f % 8) / 8, ph = p * 2 * PI;
+    let wx = 0, wy = 0;
+    for (const sd of [-1, 1]) { const dx = (u - 0.5 - sd * 0.24) / 1.6, dy = v - 0.82, rr = hypot(dx, dy) + 1e-4, k = 0.008 * sin(2 * PI * (rr * 13 - p)) * exp(-rr * 2.2) / rr; wx += dx * k; wy += dy * k; }
+    const x = u - 0.5 + wx, y = v - 0.4 + wy, jaw = 0.15 - 0.09 * ss(0.02, 0.24, y), dr = drape(u, v, ph * 2, 40, 0.14 + 1.6 * (u - 0.5) * (u - 0.5));
+    let L = 0.07 + ((1 - p) * fbm(u * 3, v * 16 - p * 1.6) + p * fbm(u * 3, v * 16 + (1 - p) * 1.6) > 0.58 ? 0.16 : 0), A = 0, M = 1;   // the scum drifts down, two drifts crossfaded so it never jumps back
     if (fbm(x * 9 + 3, y * 3) > 0.52 && ell(x, y, 0, -0.08, 0.3, 0.3) < 1) L = 0.02;                                                    // hair, gone loose in the water
     if (abs(x) < 0.2 - 0.3 * ss(0.5, 0.2, y) && y > 0.2 && y < 0.5) L = 0.2 + 0.2 * fbm(x * 30, y * 30);                                 // shoulders, further down
     if ((y < 0.02 ? ell(x, y, 0, 0.02, 0.15, 0.2) < 1 : abs(x) < jaw && y < 0.26)) {
       L = 0.72 - 1.6 * abs(x) - 0.5 * max(0, y - 0.1) + 0.1 * fbm(x * 40, y * 40);
       const eye = ell(abs(x), y, 0.062, -0.03, 0.04, 0.028);
-      if (eye < 1) { L = 0; if (f === 3 && eye < 0.14) L = 1; }                                                                       // once a loop they are open
+      if (eye < 1) { L = 0; if (f === 8 && eye < 0.14) L = 1; }                                                                       // once a loop they are open
       if (ell(x, y, 0, 0.14, 0.05, 0.075) < 1) L = 0;                                                                                // a mouth, wider than yours goes
       if (abs(x) < 0.012 && y > 0.0 && y < 0.07) L *= 0.6;
     }
     for (const sd of [-1, 1]) {
       const rr = hypot((u - 0.5 - sd * 0.24) / 1.6, v - 0.82);
-      if (abs(fr(rr * 26 - f * 0.25) - 0.5) < 0.12 && rr < 0.09) L = 0.5;                                                              // the water, broken round each wrist
+      if (abs(fr(rr * 26 - 2 * p) - 0.5) < 0.12 && rr < 0.09) L = 0.5;                                                              // the water, broken round each wrist
       for (let k = 0; k < 4; k++) {
         const fx = 0.5 + sd * (0.19 + k * 0.032), top = 0.8 + 0.012 * abs(k - 1.4), dd = dSeg(u, v, fx, top, fx + sd * 0.004 * k, 0.93 + 0.01 * (k & 1));
         if (dd < 0.011) { M = 0; L = dd > 0.007 ? 0.25 : v < top + 0.05 ? 0.9 : 0.62; }
@@ -1898,7 +1903,8 @@
     for (const sd of [-1, 1]) for (let k = 0; k < 4; k++) { const fx = 0.5 + sd * (0.19 + k * 0.032) + sd * 0.004 * k; if (dSeg(u, v, fx, 0.905, fx, 0.935 + 0.01 * (k & 1)) < 0.0105) { M = 0; L = v > 0.93 ? 0.5 : 0.85; } }   // fingers, over the edge
     if (dr >= 0) { L = dr; M = 0; }
     for (const [px, py, r] of [[0.1, 0.62, 0.11], [0.92, 0.5, 0.1], [0.84, 0.75, 0.07]]) { const p = ell(u, v, px, py, r, r * 0.45); if (p < 1 && abs(Math.atan2(v - py, u - px) - 0.6) > 0.3) { M = 0; L = p > 0.85 ? 0.15 : 0.5; } }
-    o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
+    const gx = floor(u * 150), gy = floor(v * 150), sp = v < bk && L < 0.3 && ell(x, y, 0, 0.08, 0.22, 0.32) > 1 && hash(gx, gy) > 0.993 && fr(hash(gy, gx) + p) < 0.3;   // each one comes and goes in its own time                 // and in the water, here and there, something small giving off its own light
+    o[0] = sp ? 0 : L; o[1] = A; o[2] = sp ? 0.9 : 0; o[3] = sp ? 0 : M;
   };
 
   // <<works
@@ -2755,30 +2761,41 @@
     o[0] = L; o[1] = A; o[2] = 0; o[3] = M;
   };
 
-  // --- ring: a ring trodden in the stubble, wide as a house. nothing leads to it. in the middle, a boot
+  // --- ring: from up on the headland, looking down. a ring trodden in the stubble, wide as a house, the straw laid flat and swept round the one way. no track in or out. in the middle a child's boot, stood up as if somebody had just stepped out of it, and the low moon behind throws it a long way toward us
   S.ring = (u, v, f, o) => {
-    const hz = 0.14, Z = 0.55 / max(v - hz, 1e-3), X = (u - 0.6) * Z, r = hypot(X + 0.2, (Z - 2.3) * 1), st = abs(fr(X * 6 + Z * 1.2) - 0.5) < 0.12;
-    let L = 0.3 + 0.3 * fbm(u * 3, v * 9), A = 0, B = 0, M = 1;
-    if (v > hz - 0.01) {
-      M = 0; L = (st ? 0.03 : fr(Z * 7 + hash(floor(X * 6 + Z * 1.2), 2) * 3) < 0.4 ? 0.6 : 0.16) * ss(9, 1.2, Z) + 0.02;
-      if (abs(r - 1.05 - 0.04 * fbm(Math.atan2(Z - 2.3, X + 0.2) * 3, 1)) < 0.17) L = 0.95 - 0.3 * hash(floor(X * 40), floor(Z * 40)) * (fr(Math.atan2(Z - 2.3, X + 0.2) * 9) < 0.3 ? 1.6 : 0.4);    // trodden flat
-      if (r < 0.8 && f === 3 && abs(fr(r * 5 + 0.25) - 0.5) < 0.1) L = 0.9;                                                                   // once a loop there are more of them, inside
-      const sx = (u - 0.42) / 0.105, sy = (v - 0.4) / 0.105;                                                                             // a boot, stood up in the middle of it. a child's, and done for
-      if (hypot((sx - 1.5) / 2.6, (sy - 0.55) / 0.2) < 1) L = 0;                                                                        // the long shadow of it
-      const up = exp(-(((sx - 0.2) / 1.7) ** 2) - ((sy - 0.62) / 0.75) ** 2);                                                             // and under it, something giving a very little light up through the gaps
-      if (st) B = 0.24 * up;
-      if (sx > -1.3 && sx < 1.9 && sy > -2 && sy < 0.8) {
-        const bt = (x, y) => boot(x + (y < 0 ? 0.1 * sin(y * 3.2) : 0), y, 1.6), far = (x, y) => { for (let i = 1; i < 7; i++) if (bt(x - i * 0.057, y + i * 0.035) >= 0) return i; return 0; };   // the same boot again and again going away: its far side, its top
-        const b = bt(sx, sy), t = b < 0 ? far(sx, sy) : 0;
-        if (b >= 0 || t) {
-          L = b >= 0 ? (sx > 0.5 && abs(sy - 0.33 + 0.1 * sx) < (sx - 0.5) * 0.16 ? 0 : min(b, 1)) : sy + t * 0.035 < -1.3 ? 0 : sy < -0.2 || sx > 0.9 ? 0.16 : 0.5;   // the toe has come away from the sole. the leg is empty
-          B = 0.16 * up * ss(-0.3, 0.6, sy);                                                                                            // which comes up the boot a little way,
-          if (b >= 0 && bt(sx, sy + 0.07) < 0) B = 0.42;                                                                                // and finds the underneath of it
-          if (bt(sx + 0.05, sy - 0.05) < 0 && !far(sx + 0.05, sy - 0.05)) { L = 0; B = 1; }                                             // what light there is, along the far edge of it
+    const E = 2.75, D = 6.85, ph = 0.42, cp = cos(ph), sp = sin(ph), a = (u - 0.5) / 1.2, b = (v - 0.6) / 1.2, dy = sp + b * cp, dz = cp - b * sp, BL = 0.5;
+    const mx = -0.5, mz = 0.866, tn = 0.3, Zb = -0.8;                                                                                      // the moon: low, behind and to the left
+    let L = 0.02, B = 0;
+    const hide = (X, Y) => boot(X / BL, 0.62 - Y / BL, 1);                                                                       // the boot as it stands, a cut-out across the line of sight
+    if (dy > 0) {
+      const t = E / dy, X = a * t, Z = dz * t - D, r = hypot(X, Z), th = Math.atan2(Z, X), fade = 0.14 * ss(70, 20, t) + 0.86 * ss(13, 4, t) ** 1.4;   // darker the further out, but the field goes on, dimly, to the edge
+      const R1 = 1.9 + 0.1 * fbm(th * 2 + 4, 1), R2 = 3.1 + 0.12 * fbm(th * 2, 5), band = (rr, tt) => rr > R1 && rr < R2;
+      const c = cos(0.45), sn = sin(0.45), xr = X * c + Z * sn, zr = -X * sn + Z * c;                                                // the rows the cutter left, at an angle to us
+      L = abs(fr(xr * 3) - 0.5) < 0.14 ? 0.05 : fr(zr * 5 + hash(floor(xr * 3), 1) * 3) < 0.45 ? 0.72 : 0.28;
+      if (band(r)) {                                                                                                               // laid flat, swept round, catching the moon
+        const sw = r * 4.2 + th * 0.9 + 0.5 * fbm(th * 3, r);
+        L = abs(fr(sw) - 0.5) < 0.05 ? 0.5 : 0.8 + 0.2 * fbm(th * 26, r * 3);
+        if (!band(hypot(X + mx * 0.35, Z + mz * 0.35))) L = 0.03;                                                                   // standing straw throws its edge across it
+        {                                                                                                                          // small prints in it, going round and round
+          const k = floor(th / 0.24), an = (k + 0.5) * 0.24, rr = (R1 + R2) / 2 + (k % 2 ? 0.16 : -0.16), px = X - rr * cos(an), pz = Z - rr * sin(an);
+          const ta = -px * sin(an) + pz * cos(an), na = px * cos(an) + pz * sin(an);
+          if (hypot((ta - 0.05) / 0.17, na / 0.09) < 1 || hypot((ta + 0.19) / 0.08, na / 0.08) < 1) L = 0.04;
         }
       }
-    }
-    o[0] = L; o[1] = A; o[2] = B; o[3] = M;
+      if (Z < Zb && Z > Zb - 7 && abs(X) < 5) { const s = (Zb - Z) / mz, hx = X + mx * s; if (hide(hx, s * tn) >= 0) L *= 0.08; }               // its shadow
+      L *= band(r) ? fade ** 0.6 : fade;                                                                                         // the laid straw holds the moon further out than the standing does
+      if ((D + Zb) / dz < t) {                                                                                                         // the boot, in front of the ground behind it
+        const tb = (D + Zb) / dz, bx = a * tb, by = E - dy * tb, k = hide(bx, by);
+        if (k >= 0) {
+          const xb = bx / BL, yb = 0.62 - by / BL;
+          L = k === 1 ? 0.85 : 0; B = k < 0.06 || k === 1 ? 0 : 0.4 + 0.15 * k;                                                  // the near side, out of the moon
+          if (xb < -0.6 + 0.08 * yb || yb < -1.38) { B = 0; L = 0.85; }                                                              // the moon along its back and its open top
+          if (xb > 0.5 && abs(yb - 0.33 + 0.1 * xb) < (xb - 0.5) * 0.16) { B = 0; L = 0; }                                           // the toe has come away from the sole
+        }
+      }
+    } else B = 0.16 * exp(dy / 0.018) * (0.5 + 0.5 * fbm(u * 5, 2));                                                                   // and far off, low along the edge of the world, something the colour of the boot
+    L *= ss(0.85, 0.35, hypot(u - 0.5, (v - 0.5) * 1.1));
+    o[0] = min(L, 1); o[1] = 0; o[2] = B; o[3] = 0;
   };
 
   // --- fdoor: the door from the trees, stood in its frame in the middle of the field now, seen from behind. it is not quite shut. what comes through the gap is not moonlight
@@ -2989,10 +3006,10 @@
     lamp: { seq: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0] }, cellar: { seq: [0, 1, 0, 1, 2, 3, 2, 3] }, cat: { n: 6, seq: [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 0, 3, 4, 4, 4, 5, 0] }, shore: { seq: [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3] },
     pumpkins: { seq: [0, 1, 2, 3, 0, 2] }, skitter: { n: 10 }, marsh: { n: 10 }, fen: { n: 10 }, reeds: { n: 10, seq: [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 2, 3] }, road: { n: 10 }, barn: { n: 1 },
     window: { seq: [0, 1, 2, 1, 0, 2, 1, 0, 1, 3] }, tv: { seq: [0, 1, 2, 0, 1, 2, 1, 0, 2, 3] }, well: { seq: [0, 1, 3, 1, 0, 1, 3, 1, 0, 2] },
-    field: { seq: [0, 0, 0, 0, 0, 0, 0, 0, 3, 3] }, porch: { seq: [0, 1, 2, 1] }, yard: { seq: [0, 1, 2, 1] },
+    field: { seq: [0, 0, 0, 0, 0, 0, 0, 0, 3, 3] }, drowned: { n: 9, seq: [0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7] }, porch: { seq: [0, 1, 2, 1] }, yard: { seq: [0, 1, 2, 1] },
     birches: { seq: [0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 3, 3, 2, 1] }, swing: { seq: [0, 0, 1, 2, 2, 3] }, pier: { seq: [0, 1, 0, 1, 0, 1, 0, 1, 3, 3] }, hall: { seq: [0, 0, 0, 0, 0, 0, 0, 0, 3, 3] }, mantel: { seq: [0, 0, 0, 0, 0, 0, 0, 3] }, rungs: { seq: [0, 1, 2, 1, 0, 1, 2, 1, 3, 3] }, lighthouse: { seq: [0, 0, 1, 2, 2, 3] }, oak: { seq: [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 3] }, grove: { seq: [0, 0, 1, 1, 2, 2, 1, 1, 0, 0, 3, 3] }, pond: { seq: [0, 0, 1, 1, 2, 2, 3, 3] }, drowned: { seq: [0, 0, 1, 1, 2, 2, 1, 1, 0, 0, 1, 1, 2, 2, 3, 3] }, mound: { seq: [0, 0, 1, 1, 2, 2, 3, 3] },
     looms: { seq: [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 3] }, chain: { n: 2, seq: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0] }, paywin: { n: 7, seq: [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 3, 4, 5, 6, 3] }, adit: { seq: [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 3, 3] }, junction: { seq: [0, 1, 2, 1, 0, 1, 2, 3] }, tally: { seq: [0, 0, 0, 0, 0, 0, 0, 0, 3, 3] }, spares: { seq: [0, 0, 0, 0, 0, 0, 0, 0, 0, 3] },
-    chute: { n: 6, seq: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 5, 4] }, halt: { seq: [0, 0, 1, 2, 0, 0, 1, 0, 3, 3] }, signal: { seq: [0, 0, 0, 0, 0, 1, 2, 3, 3, 3, 3, 2] }, ring: { seq: [0, 0, 0, 0, 0, 0, 0, 3] }, cradle: { n: 10 }, keys: { seq: [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 3, 3, 0] }, knocker: { seq: [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 3, 3, 0] }, stray: { seq: [0, 0, 1, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 2, 0, 3] },
+    chute: { n: 6, seq: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 5, 4] }, halt: { seq: [0, 0, 1, 2, 0, 0, 1, 0, 3, 3] }, signal: { seq: [0, 0, 0, 0, 0, 1, 2, 3, 3, 3, 3, 2] }, cradle: { n: 10 }, keys: { seq: [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 3, 3, 0] }, knocker: { seq: [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 3, 3, 0] }, stray: { seq: [0, 0, 1, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 2, 0, 3] },
     wrack: { seq: [0, 0, 1, 1, 2, 2, 3, 3] }, mainst: { seq: [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3] }, storefront: { seq: [0, 1, 2, 1, 0, 1, 2, 1, 0, 3] },
   };
   const frames = (id) => META[id]?.n || 4;

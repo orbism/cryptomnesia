@@ -22,6 +22,14 @@ contract CryptomnesiaTest {
         c.setPages(p);
         c.addChunk(hex"0102");
         c.addChunk(hex"030405");
+        // two stills, three bytes and two: the table says the first ends at 9 and the second at 11. sent as two pieces, the first padded out to a full one
+        bytes memory head = abi.encodePacked(hex"00000900000b", hex"aabbcc", hex"ddee");
+        bytes memory full = new bytes(24575);
+        for (uint256 i; i < head.length; ++i) {
+            full[i] = head[i];
+        }
+        c.addCover(full);
+        c.addCover(hex"ff");
         vm.deal(reader, 1 ether);
     }
 
@@ -29,6 +37,26 @@ contract CryptomnesiaTest {
 
     function testArtIsJoinedInOrder() public view {
         require(keccak256(c.art()) == keccak256(hex"0102030405"), "art");
+    }
+
+    function testStillsAreCutFromTheTable() public view {
+        require(
+            keccak256(c.cover(1)) == keccak256(hex"aabbcc") && keccak256(c.cover(2)) == keccak256(hex"ddee"), "cover"
+        );
+    }
+
+    function testAStillCanRunOverTheJoin() public {
+        c.clearCovers();
+        bytes memory full = new bytes(24575);
+        full[2] = 0x06; // page 1 ends at 6: it is empty
+        full[3] = 0x00;
+        full[4] = 0x60;
+        full[5] = 0x01; // page 2 ends at 24577: two bytes into the next piece
+        full[24574] = 0x11;
+        c.addCover(full);
+        c.addCover(hex"2233");
+        bytes memory got = c.cover(2);
+        require(got.length == 24571 && got[24568] == 0x11 && got[24569] == 0x22 && got[24570] == 0x33, "join");
     }
 
     function testMintTakesExactPriceAndCounts() public {
@@ -55,6 +83,8 @@ contract CryptomnesiaTest {
         c.addChunk(hex"06");
         vm.expectRevert(Cryptomnesia.Locked.selector);
         c.clearChunks();
+        vm.expectRevert(Cryptomnesia.Locked.selector);
+        c.addCover(hex"06");
     }
 
     function testWithdrawPaysOwner() public {
