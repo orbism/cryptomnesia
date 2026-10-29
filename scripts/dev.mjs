@@ -19,7 +19,8 @@ if (has('anvil') && has('forge')) {
   } else console.log('anvil · already running on 127.0.0.1:8545');
   try {
     execFileSync('node', [`${root}scripts/deploy.mjs`], { stdio: 'inherit', env: { ...process.env, CHAIN: 'localhost', DEPLOY_AUTO: '1' } });
-    Object.assign(env, { VITE_CHAIN: 'localhost', VITE_CONTRACT: JSON.parse(readFileSync(rec, 'utf8')).address });
+    const { address, block } = JSON.parse(readFileSync(rec, 'utf8'));
+    Object.assign(env, { VITE_CHAIN: 'localhost', VITE_CONTRACT: address, VITE_DEPLOY_BLOCK: String(block) });
     console.log('\nTo mint locally, add network 127.0.0.1:8545 (chain 31337) to your wallet and import one of anvil’s test accounts.\n');
   } catch { console.log('\nThe local deploy did not finish. Starting the site with minting closed.\n'); }
 } else console.log('Foundry (anvil, forge) is not installed. Starting the site with minting closed.\n');

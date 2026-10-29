@@ -8,7 +8,7 @@ import { Wallet, Who } from './Mint.jsx';
 import Modal from './Modal.jsx';
 import Ornate from './Ornate.jsx';
 import Plate from './Plate.jsx';
-import { chain, contract, MOVED, scanToken, seaToken, START, txUrl } from './wallet.js';
+import { ABI, chain, contract, MOVED, scanToken, seaToken, START, txUrl } from './wallet.js';
 
 const names = Object.keys(PAGES), sized = (k) => ({ ...PAGES[k], w: PW, h: PH });
 
@@ -42,6 +42,20 @@ function ledger(logs) {
   }
   return ids;
 }
+// the chain's record of every copy moving, from the block the contract went in at, in order. public nodes answer for only so many blocks at a time
+// (Sepolia's, 1,000), so it is asked a stretch at a time, and a refused stretch is halved and asked again
+async function history(client) {
+  const end = await client.getBlockNumber(), logs = [];
+  for (let a = START, span = 100000n; a <= end;) {
+    const b = a + span - 1n < end ? a + span - 1n : end;
+    try { logs.push(...(await client.getLogs({ address: contract, events: MOVED, fromBlock: a, toBlock: b === end ? 'latest' : b }))); a = b + 1n; }
+    catch (e) { if (span < 500n) throw e; span /= 2n; }
+  }
+  return logs;
+}
+// read once a visit to the list, when a page is first brought up, and kept until the list is left
+let record;
+const recordOf = (client) => (record ||= history(client).then(ledger, (e) => { record = null; throw e; }));
 // an address, said briefly; a click copies the whole of it
 function Addr({ a }) {
   const [ok, setOk] = useState(false);
@@ -63,9 +77,10 @@ const Stone = ({ at, href, icon, label }) => href
   : <span className={`shut ${at} soon`} title={`${label}: not on a local chain`}><Icon icon={icon} size={12} /></span>;
 
 // one page brought up in the frame, moving, with no turn into it, and beside the frame (on a phone, in a drawer under it) who keeps it now and everything that has happened to it. the way out is the stone at the heart of the frame's top right corner
-function Big({ k, e, onShut }) {
+function Big({ k, onShut }) {
+  const client = usePublicClient({ chainId: chain.id }), id = names.indexOf(k) + 1, [e, setE] = useState(null), [fail, setFail] = useState('');
+  useEffect(() => { let dead = false; recordOf(client).then((b) => dead || setE(b[id] || {}), (x) => !dead && setFail(x.shortMessage || x.message)); return () => { dead = true; }; }, [client, id]);
   const past = e?.past || [], kept = Object.entries(e?.held || {}).filter(([, c]) => c > 0).sort((a, b) => b[1] - a[1]);
-  const client = usePublicClient({ chainId: chain.id }), id = names.indexOf(k) + 1;
   const page = useMemo(() => sized(k), [k]), colors = useMemo(() => pal(PAGES[k]), [k]), name = `cryptomnesia-${String(id).padStart(2, '0')}-${k}`;
   const [open, setOpen] = useState(false), [when, setWhen] = useState({}), flip = () => setOpen((o) => !o);
   useEffect(() => {                                                             // the dates are the blocks' own, asked for only when the page is looked at
@@ -81,7 +96,7 @@ function Big({ k, e, onShut }) {
         <Download page={page} colors={colors} name={name} className="sea" size={14} tail />
         {kept.length > 0 && <><h3>Kept by</h3><ul>{kept.map(([a, c]) => <li key={a}><Addr a={a} /> × {c}</li>)}</ul></>}
         <h3>What became of it</h3>
-        {past.length ? <ol>{[...past].reverse().map((p, i) => <Move key={i} {...p} when={when[p.block]} />)}</ol> : <p>Nobody has remembered this one yet. It is patient.</p>}
+        {!e ? (fail ? <p>The chain would not say. {fail}</p> : <Asking />) : past.length ? <ol>{[...past].reverse().map((p, i) => <Move key={i} {...p} when={when[p.block]} />)}</ol> : <p>Nobody has remembered this one yet. It is patient.</p>}
         <p><small>{seaToken(id) ? 'Nothing is bought or sold here. OpenSea will take your money for it, if you insist.' : 'Nothing is bought or sold here. When it has a market, the market will be somewhere else.'}</small></p>
       </aside>
     }>
@@ -104,18 +119,21 @@ export default function Editions({ piece, onPiece }) {
   const client = usePublicClient({ chainId: chain.id }), { address } = useAccount();
   const [book, setBook] = useState(null), [tab, setTab] = useState('all'), [err, setErr] = useState(''), [fit, setFit] = useState(room), [left, setLeft] = useState(edge);
   useEffect(() => { const size = () => { setFit(room()); setLeft(edge()); }; addEventListener('resize', size); document.fonts.ready.then(size); return () => removeEventListener('resize', size); }, []);
-  useEffect(() => {
+  useEffect(() => {                                                             // how many of each page there are, and the wallet's own, in a call each. the record of who and when waits until a page is brought up
     if (!contract || !client) return;
     let dead = false;
-    client.getLogs({ address: contract, events: MOVED, fromBlock: START, toBlock: 'latest' }).then((logs) => dead || setBook(ledger(logs)), (e) => !dead && setErr(e.shortMessage || e.message));
+    const read = (functionName, args) => client.readContract({ address: contract, abi: ABI, functionName, args }).then((n) => n.map(Number));
+    Promise.all([read('minted'), address && read('balanceOfBatch', [names.map(() => address), names.map((_, i) => BigInt(i + 1))])])
+      .then(([all, yours]) => dead || setBook({ all, yours }), (e) => !dead && setErr(e.shortMessage || e.message));
     return () => { dead = true; };
-  }, [client]);
+  }, [client, address]);
+  useEffect(() => () => { record = null; }, []);                                // leaving the list lets the record go: the next visit reads it fresh
   const say = (p) => <main className="shelf" style={{ paddingLeft: left }}>{p}</main>;
   if (!contract) return say(<p className="note">mintable very soon!</p>);
   if (err) return say(<p className="note">The chain would not say. {err}</p>);
   if (!book) return say(<Asking />);
-  const mine = tab === 'yours', count = (e) => (mine ? e.held[address] || 0 : Object.values(e.minted).reduce((a, c) => a + c, 0));
-  const rows = names.map((k, i) => ({ k, id: i + 1, e: book[i + 1] })).filter((r) => r.e && count(r.e) > 0), all = rows.reduce((a, r) => a + count(r.e), 0);
+  const mine = tab === 'yours', counts = (mine ? book.yours : book.all) || [];
+  const rows = names.map((k, i) => ({ k, id: i + 1, n: counts[i] || 0 })).filter((r) => r.n > 0), all = rows.reduce((a, r) => a + r.n, 0);
   const tabs = <p className="tabs">{[['all', 'all memories'], ['yours', 'your memories']].map(([t, label]) => <Ornate as="button" type="button" level={5} key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>{label}</Ornate>)}</p>;
   const note = mine
     ? !address ? <>Whose memories are these? We can't tell what's yours until you tell us who you are. <Wallet /></>
@@ -127,16 +145,16 @@ export default function Editions({ piece, onPiece }) {
       <p className="note">{note}</p>
       {(!mine || address) && rows.length > 0 && (
         <ol style={{ gridTemplateRows: `repeat(${Math.max(8, Math.ceil(rows.length / fit))}, auto)` }}>
-          {rows.map(({ k, id, e }) => (
+          {rows.map(({ k, id, n }) => (
             <li key={k}>
-              <button type="button" className="thumb" aria-label={`look at ${k}`} onClick={() => onPiece(k)}><Thumb k={k} /></button>
-              <button type="button" onClick={() => onPiece(k)}><span>{String(id).padStart(2, '0')}</span><span>{k}</span><span>× {count(e)}</span></button>
+              <button type="button" className="thumb" aria-label={`look at ${PAGES[k].title}`} onClick={() => onPiece(k)}><Thumb k={k} /></button>
+              <button type="button" onClick={() => onPiece(k)}><span>{String(id).padStart(2, '0')}</span><span>{PAGES[k].title}</span><span>× {n}</span></button>
               {seaToken(id) && <a href={seaToken(id)} target="_blank" rel="noreferrer">opensea</a>}
             </li>
           ))}
         </ol>
       )}
-      {piece && <Big k={piece} e={book[names.indexOf(piece) + 1]} onShut={() => onPiece(null)} />}
+      {piece && <Big k={piece} onShut={() => onPiece(null)} />}
     </main>
   );
 }
