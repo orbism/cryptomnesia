@@ -14,6 +14,7 @@ contracts/cache/
 contracts/broadcast/
 contracts/deployments/localhost.json
 contracts/deployments/anvil-state.json
+contracts/deployments/*.preview.html
 
 # reference video, not ours to publish
 creepy.mp4

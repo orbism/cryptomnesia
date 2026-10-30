@@ -1,4 +1,4 @@
-import { parseAbi, parseAbiItem, parseEther } from 'viem';
+import { parseAbi, parseAbiItem } from 'viem';
 import { createConfig, http } from 'wagmi';
 import { foundry, mainnet, sepolia } from 'wagmi/chains';
 import { coinbaseWallet, injected, walletConnect } from 'wagmi/connectors';
@@ -6,7 +6,6 @@ import { coinbaseWallet, injected, walletConnect } from 'wagmi/connectors';
 const env = import.meta.env;
 export const chain = { localhost: foundry, sepolia, mainnet }[env.VITE_CHAIN] || sepolia;
 export const contract = env.VITE_CONTRACT || null;
-export const PRICE = parseEther('0.003');
 // what the site asks of contracts/src/Cryptomnesia.sol: the calls it makes, and the events every copy leaves behind as it moves (from nobody = minted, to nobody = burned)
 export const MOVED = [parseAbiItem('event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value)'), parseAbiItem('event TransferBatch(address indexed operator, address indexed from, address indexed to, uint256[] ids, uint256[] values)')];   // every mint, sale and gift leaves one of these
 // where one token is on OpenSea, on the chains OpenSea knows
@@ -15,7 +14,7 @@ export const txUrl = (hash) => (chain.blockExplorers ? `${chain.blockExplorers.d
 export const scanToken = (id) => (contract && chain.blockExplorers ? `${chain.blockExplorers.default.url}/nft/${contract}/${id}` : null);
 export const seaToken = (id) => (SEA && contract ? `${SEA}/${contract}/${id}` : null);
 export const START = BigInt(env.VITE_DEPLOY_BLOCK || 0);   // the block the contract went in at, so the minted list need not search from the beginning
-export const ABI = parseAbi(['function mint(uint256 id, uint256 amount) payable', 'function minted() view returns (uint256[])', 'function balanceOfBatch(address[] accounts, uint256[] ids) view returns (uint256[])']);
+export const ABI = parseAbi(['function mint(uint256 id, uint256 amount) payable', 'function price() view returns (uint256)', 'function cap() view returns (uint256)', 'function paused() view returns (bool)', 'function totalSupply(uint256 id) view returns (uint256)', 'function minted() view returns (uint256[])', 'function balanceOfBatch(address[] accounts, uint256[] ids) view returns (uint256[])']);
 
 // the nodes the site reads through: VITE_RPC if set, else public ones that answer for 100,000 blocks of history at a time (the chains' defaults allow 1,000, and rate-limit)
 const READ = { [mainnet.id]: 'https://mainnet.gateway.tenderly.co', [sepolia.id]: 'https://sepolia.gateway.tenderly.co' };

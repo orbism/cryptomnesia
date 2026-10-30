@@ -102,12 +102,18 @@ contract CryptomnesiaTest {
         }
     }
 
-    function testMintOpensAtLock() public {
+    function testMintOpensAtLockAndStart() public {
+        c.start();
         vm.prank(reader);
         vm.expectRevert(Cryptomnesia.NoSuchPage.selector);
-        c.mint{value: 0.003 ether}(1, 1);
+        c.mint{value: 0.003 ether}(1, 1); // started, but not locked: nothing to mint
         require(c.minted().length == 0, "closed");
+        c.pause();
         c.lock();
+        vm.prank(reader);
+        vm.expectRevert(Cryptomnesia.Paused.selector);
+        c.mint{value: 0.003 ether}(1, 1); // locked, but paused
+        c.start();
         vm.prank(reader);
         c.mint{value: 0.006 ether}(2, 2);
         uint256[] memory all = c.minted();
@@ -119,6 +125,7 @@ contract CryptomnesiaTest {
 
     function testMintRefusesWrongPriceNoneAndUnknownPage() public {
         c.lock();
+        c.start();
         vm.prank(reader);
         vm.expectRevert(Cryptomnesia.WrongPrice.selector);
         c.mint{value: 0.002 ether}(1, 1);
@@ -135,6 +142,7 @@ contract CryptomnesiaTest {
 
     function testTheCapHoldsAgainstAMintFromInsideAMint() public {
         c.lock();
+        c.start();
         Greedy g = new Greedy(c);
         vm.expectRevert(Cryptomnesia.SoldOut.selector);
         g.go{value: 0.009 ether}();
@@ -178,6 +186,30 @@ contract CryptomnesiaTest {
         c.lock();
     }
 
+    function testPausedFromTheStartAndOnlyTheOwnerStartsOrPauses() public {
+        require(c.paused(), "born paused");
+        c.lock();
+        require(c.paused(), "still paused once locked");
+        bytes memory no = abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", reader);
+        vm.prank(reader);
+        vm.expectRevert(no);
+        c.start();
+        c.start();
+        vm.prank(reader);
+        c.mint{value: 0.003 ether}(1, 1);
+        vm.prank(reader);
+        vm.expectRevert(no);
+        c.pause();
+        c.pause();
+        vm.prank(reader);
+        vm.expectRevert(Cryptomnesia.Paused.selector);
+        c.mint{value: 0.003 ether}(1, 1);
+        c.start();
+        vm.prank(reader);
+        c.mint{value: 0.003 ether}(1, 1);
+        require(c.balanceOf(reader, 1) == 2 && c.totalSupply(1) == 2, "minted twice, around a pause");
+    }
+
     function testOnlyTheOwnerStores() public {
         bytes memory no = abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", reader);
         vm.prank(reader);
@@ -193,6 +225,7 @@ contract CryptomnesiaTest {
 
     function testWithdrawPaysOwnerWhoCannotLeave() public {
         c.lock();
+        c.start();
         vm.prank(reader);
         c.mint{value: 0.003 ether}(1, 1);
         uint256 before = address(this).balance;

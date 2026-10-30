@@ -68,6 +68,10 @@ footer button:hover, footer a:hover { color: #ff2a2a; }
 .mintbox { padding: 14px 22px; color: var(--accent); font-size: 16px; line-height: 1.75; cursor: pointer; transition: color 0.5s ease; }
 /* what came of it: a little way under the button, and a little brighter than the other small print */
 .mint .note { margin-top: 14px; font-size: 16px; color: color-mix(in srgb, var(--ink), var(--bone)); }
+.mint .note .line { display: block; }
+.turning { display: inline-block; width: 1ch; text-align: center; }
+.mint .note .turning { color: var(--bone); }
+.mint .note .won { display: block; margin-bottom: 2px; font: 600 28px/1.1 "Grenze Gotisch", serif; color: var(--bone); }
 .mintbox.busy { opacity: 0.4; pointer-events: none; }
 .mintbox:hover { color: #ff2a2a; }
 .mintbox span { display: block; }

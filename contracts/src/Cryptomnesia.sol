@@ -38,14 +38,15 @@ import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
 /// The program that draws every page is stored here once, gzipped, as contract code. uri() hands back a web page
 /// that unpacks it in the browser and draws the token's page, moving, exactly as the site does.
 /// For places that show only a picture, a small still of every page is stored too, as PNG, and each page's name and traits.
-/// The owner stores it all, then locks it: from then on nothing can change, and the pages can be minted.
+/// The owner stores it all, then locks it: from then on nothing can change. Minting starts paused; the owner starts it, and can pause it again.
 contract Cryptomnesia is ERC1155, ERC2981, Ownable {
     string public constant name = "Cryptomnesia";
     string public constant symbol = "CRYPT";
     string constant ABOUT = "Drawn by code held on chain, in the browser, every time it is opened.";
     uint256 public immutable price; // wei for one copy of one page
     uint256 public immutable cap; // most copies of any one page. 0 = no limit
-    uint256 public pageCount; // 0 until lock(): minting is closed and the stores can still change
+    uint128 public pageCount; // 0 until lock(): minting is closed and the stores can still change
+    bool public paused = true; // minting waits for start(). in pageCount's slot, so mint() reads both at once
     mapping(uint256 id => uint256) public totalSupply;
     // 0 = the drawing program, gzipped. 1 = a still of every page, PNG. 2 = every page's name and traits (see _fields).
     // each is a run of bytes in pieces, each piece held as a contract's code. 1 and 2 begin with two bytes saying how many pages,
@@ -54,6 +55,7 @@ contract Cryptomnesia is ERC1155, ERC2981, Ownable {
     uint256 constant PIECE = 24575; // what every piece of 1 and 2 but the last must hold, and the most any may
 
     error Locked();
+    error Paused();
     error NotReady();
     error NoSuchPage();
     error NoneAsked();
@@ -75,8 +77,16 @@ contract Cryptomnesia is ERC1155, ERC2981, Ownable {
     // --- minting, once locked
 
     function mint(uint256 id, uint256 amount) external payable {
+        uint256 n;
+        bool p;
+        assembly ("memory-safe") {
+            let w := sload(pageCount.slot) // both from the one read
+            n := and(w, 0xffffffffffffffffffffffffffffffff)
+            p := and(shr(mul(paused.offset, 8), w), 0xff)
+        }
+        if (p) revert Paused();
         unchecked {
-            if (id - 1 >= pageCount) revert NoSuchPage(); // id 0 wraps round, and fails too
+            if (id - 1 >= n) revert NoSuchPage(); // id 0 wraps round, and fails too
         }
         if (amount == 0) revert NoneAsked();
         if (msg.value != price * amount) revert WrongPrice();
@@ -89,6 +99,16 @@ contract Cryptomnesia is ERC1155, ERC2981, Ownable {
     function withdraw() external onlyOwner {
         (bool ok,) = owner().call{value: address(this).balance}("");
         if (!ok) revert NotPaid();
+    }
+
+    /// Stop minting, until start().
+    function pause() external onlyOwner {
+        paused = true;
+    }
+
+    /// Open minting, or open it again. Before lock() there is nothing to mint, whatever this says.
+    function start() external onlyOwner {
+        paused = false;
     }
 
     /// Never: with no owner, what has been paid in could not be withdrawn.
@@ -128,7 +148,7 @@ contract Cryptomnesia is ERC1155, ERC2981, Ownable {
         if (n == 0 || n != _count(stores[1]) || stores[0].length == 0 || !_whole(stores[1]) || !_whole(stores[2])) {
             revert NotReady();
         }
-        pageCount = n;
+        pageCount = uint128(n);
     }
 
     // --- reading it back

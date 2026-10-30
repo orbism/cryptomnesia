@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Icon } from './Footer.jsx';
+import { Turning } from './Mint.jsx';
 import { gif } from './gif.js';
 
 // the page as a looping GIF. it takes a moment to draw, and says so. label = the words beside the arrow (none, and the arrow is all there is); tail puts the arrow after them
@@ -13,5 +14,5 @@ export default function Download({ page, colors, name, className = 'save', label
     a.href = URL.createObjectURL(await gif(page, colors)); a.download = `${name}.gif`; a.click(); URL.revokeObjectURL(a.href);
     setBusy(false);
   };
-  return <button type="button" className={className} disabled={busy} aria-label="download as a GIF" title={busy ? 'drawing…' : 'download as a GIF'} onClick={save}>{tail || <Icon icon="down" size={size} />}{label && (busy ? 'drawing…' : label)}{tail && <Icon icon="down" size={size} />}</button>;
+  return <button type="button" className={className} disabled={busy} aria-label="download as a GIF" title={busy ? 'drawing…' : 'download as a GIF'} onClick={save}>{tail || <Icon icon="down" size={size} />}{label && (busy ? <>drawing <Turning /></> : label)}{tail && <Icon icon="down" size={size} />}</button>;
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // `pnpm dev`: a local chain, the contract on it with the current art, and the site pointed at both.
 // Starts anvil if none is running, deploys (or brings up to date) through scripts/deploy.mjs, then runs vite.
-// Without Foundry installed it just runs the site, with minting closed.
+// Without Foundry installed it just runs the site, with minting closed. With .env.local pointing at sepolia or mainnet, it runs the site against that instead.
 import { execFileSync, spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
@@ -10,8 +10,11 @@ const has = (bin) => { try { execFileSync(bin, ['--version'], { stdio: 'ignore' 
 const up = () => fetch(RPC, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}' }).then((r) => r.ok, () => false);
 const env = { ...process.env };
 let anvil;
+// .env.local pointed at a real chain (as npm run deploy leaves it): the site runs against that, and no local chain is started
+const real = (() => { try { return readFileSync(`${root}.env.local`, 'utf8').match(/^VITE_CHAIN=(sepolia|mainnet)\s*$/m)?.[1]; } catch { return null; } })();
 
-if (has('anvil') && has('forge')) {
+if (real) console.log(`.env.local points the site at ${real}. Running it against that, with no local chain. Take VITE_CHAIN out of .env.local to go back to anvil.\n`);
+else if (has('anvil') && has('forge')) {
   if (!(await up())) {
     anvil = spawn('anvil', ['--silent', '--state', `${root}contracts/deployments/anvil-state.json`], { stdio: 'ignore' });   // the chain is kept in a file between runs, so what was minted on it is still there next time
     for (let i = 0; i < 40 && !(await up()); i++) await new Promise((r) => setTimeout(r, 150));

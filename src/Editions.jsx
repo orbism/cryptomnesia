@@ -4,7 +4,7 @@ import { useAccount, usePublicClient } from 'wagmi';
 import Download from './Download.jsx';
 import { Icon } from './Footer.jsx';
 import { DF, PAGES, PH, PW, pal } from './lib.js';
-import { Wallet, Who } from './Mint.jsx';
+import { Turning, Wallet, Who } from './Mint.jsx';
 import Modal from './Modal.jsx';
 import Ornate from './Ornate.jsx';
 import Plate from './Plate.jsx';
@@ -21,12 +21,7 @@ function Thumb({ k }) {
   useEffect(() => { let dead = false; still(k).then((c) => dead || ref.current.getContext('2d').drawImage(c, 0, 0)); return () => { dead = true; }; }, [k]);
   return <canvas ref={ref} width={PW} height={PH} />;
 }
-// the wait while the contract is asked: three dots, growing slowly to eight, and round again
-function Asking() {
-  const [n, setN] = useState(3);
-  useEffect(() => { const t = setInterval(() => setN((x) => (x < 8 ? x + 1 : 3)), 450); return () => clearInterval(t); }, []);
-  return <p className="note">Asking the contract{'.'.repeat(n)}</p>;
-}
+const Asking = () => <p className="note">Asking the contract <Turning /></p>;
 
 // every copy of every page, followed from the chain's own record of it moving: who minted how many (minted), who holds how many now (held), and every move in order (past)
 function ledger(logs) {
@@ -67,7 +62,7 @@ const day = (t) => new Date(t * 1000).toLocaleDateString(undefined, { day: 'nume
 function Move({ from, to, n, when, tx }) {
   const x = n > 1 ? ` (${n})` : '', link = txUrl(tx);
   const said = from === zeroAddress ? <><Addr a={to} /> remembered it{x}</> : to === zeroAddress ? <><Addr a={from} /> forgot it, on purpose{x}</> : <><Addr a={from} /> let it go to <Addr a={to} />{x}</>;
-  return <li>{said}<small>{when ? day(when) : '…'}{link && <> · <a href={link} target="_blank" rel="noreferrer">the record</a></>}</small></li>;
+  return <li>{said}<small>{when ? day(when) : <Turning />}{link && <> · <a href={link} target="_blank" rel="noreferrer">the record</a></>}</small></li>;
 }
 
 const out = <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg>;
