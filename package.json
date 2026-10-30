@@ -11,7 +11,8 @@
     "fonts": "node scripts/fonts.mjs",
     "covers": "node scripts/covers.mjs",
     "test:contracts": "cd contracts && forge test",
-    "deploy": "node scripts/deploy.mjs"
+    "deploy": "node scripts/deploy.mjs",
+    "verify": "node scripts/deploy.mjs verify"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.0",

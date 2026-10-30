@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-// Deploys Cryptomnesia and puts its art on chain, asking for whatever it needs as it goes.
-//   npm run deploy
+// Deploys Cryptomnesia and puts its art on chain. Everything it needs is asked for first and shown back before anything is sent.
+//   npm run deploy           deploy, or carry on with one that stopped part way
+//   npm run verify           send the source of the last deployment on a chain to Etherscan
 // Chains: localhost (anvil), sepolia, mainnet. Keys can be given as ALCHEMY_KEY, ETHERSCAN_KEY and DEPLOYER_KEY in the
-// environment; anything missing is asked for. DEPLOY_AUTO=1 takes every default without asking (local use). Nothing secret is written to disk. A deployment that stops part way can be picked up again.
+// environment; anything missing is asked for. DEPLOY_AUTO=1 takes every default without asking (local use). No key but the Alchemy one
+// is written to disk: the site reads the chain through it, so it goes into .env.live with everything else the site needs.
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import readline from 'node:readline';
@@ -31,12 +33,31 @@ const secret = async (q) => { process.stdout.write(`${q} (hidden): `); mute = tr
 const yes = async (q, def = false) => /^y/i.test(await ask(`${q} (y/n)`, def ? 'y' : 'n'));
 const say = (s = '') => console.log(s), die = (s) => { say(`\n${s}`); process.exit(1); };
 const eth = (wei) => `${Number(formatEther(wei)).toFixed(5)} ETH`;
+const SOL = `${root}contracts/src/Cryptomnesia.sol`;
+const compile = () => { execFileSync('forge', ['build', '--silent'], { cwd: `${root}contracts`, stdio: 'inherit' }); return JSON.parse(readFileSync(`${root}contracts/out/Cryptomnesia.sol/Cryptomnesia.json`, 'utf8')); };
+// the source checked against the chain through Etherscan's v2 API, one key for every chain. the key goes in the environment, where ps cannot see it
+const verify = (address, args, chainId, abi, key) => {
+  const types = abi.find((x) => x.type === 'constructor').inputs, typed = [BigInt(args[0]), BigInt(args[1]), args[2], args[3], BigInt(args[4])];
+  const cmd = ['verify-contract', address, 'src/Cryptomnesia.sol:Cryptomnesia', '--chain', String(chainId), '--verifier-url', `https://api.etherscan.io/v2/api?chainid=${chainId}`, '--constructor-args', encodeAbiParameters(types, typed), '--watch'];
+  try { execFileSync('forge', cmd, { cwd: `${root}contracts`, stdio: 'inherit', env: { ...env, ETHERSCAN_API_KEY: key } }); return true; }
+  catch { say('Verification did not go through. Try again later with: npm run verify'); return false; }
+};
 
 try {
-  say('Cryptomnesia · deploy\n');
+  // the eye from the head of the contract's source, where Etherscan shows it too
+  const head = readFileSync(SOL, 'utf8').split('\n').slice(1);
+  say(`${head.slice(0, head.findIndex((l) => !l.startsWith('//'))).map((l) => l.slice(3)).join('\n')}\n`);
+  const VERIFY = process.argv[2] === 'verify';
   // --- where
-  const name = env.CHAIN || (await ask('Chain: localhost, sepolia or mainnet', 'localhost'));
+  const name = env.CHAIN || (await ask(VERIFY ? 'Chain: sepolia or mainnet' : 'Chain: localhost, sepolia or mainnet', VERIFY ? 'sepolia' : 'localhost'));
   const net = CHAINS[name] || die(`Unknown chain "${name}".`);
+  const recFile = `${root}contracts/deployments/${name}.json`, prev = existsSync(recFile) ? JSON.parse(readFileSync(recFile, 'utf8')) : null;
+  if (VERIFY) {
+    if (name === 'localhost') die('Etherscan cannot see a local chain.');
+    if (!prev) die(`No deployment on ${name} is recorded in ${recFile}.`);
+    say(`Verifying ${prev.address} on ${name}…`);
+    process.exit(verify(prev.address, prev.args, net.chain.id, compile().abi, env.ETHERSCAN_KEY || (await secret('Etherscan API key')) || die('An Etherscan key is needed.')) ? 0 : 1);
+  }
   if (AUTO && name !== 'localhost') die('DEPLOY_AUTO=1 is for a local chain only: on a real one every clear and upload is asked about.');
   const alchemy = name === 'localhost' ? '' : env.ALCHEMY_KEY || (await secret('Alchemy API key')) || die('An Alchemy key is needed for this chain.');
   const transport = http(net.rpc(alchemy)), pub = createPublicClient({ chain: net.chain, transport });
@@ -54,13 +75,10 @@ try {
 
   // --- build
   say('\nPacking the art and compiling…');
-  const art = await pack();
-  execFileSync('forge', ['build', '--silent'], { cwd: `${root}contracts`, stdio: 'inherit' });
-  const { abi, bytecode } = JSON.parse(readFileSync(`${root}contracts/out/Cryptomnesia.sol/Cryptomnesia.json`, 'utf8'));
+  const art = await pack(), { abi, bytecode } = compile();
   say(`${art.pages.length} pages · art ${art.gz.length} bytes gzipped, in ${art.chunks.length} piece${art.chunks.length > 1 ? 's' : ''} · stills ${art.covers.blob.length} bytes, in ${art.covers.chunks.length} · names and traits ${art.metas.blob.length} bytes`);
 
   // --- new, or carry on with one that stopped
-  const recFile = `${root}contracts/deployments/${name}.json`, prev = existsSync(recFile) ? JSON.parse(readFileSync(recFile, 'utf8')) : null;
   // a contract from before the stores were laid out this way has no pieces() to answer with: that one is left where it is and a new one deployed.
   // any other failure to ask (the network) stops the run, rather than deploy twice
   const current = (at) => pub.readContract({ address: at, abi, functionName: 'pieces', args: [0n] }).then(() => true, (e) => {
@@ -70,6 +88,7 @@ try {
   let address = prev && (await pub.getCode({ address: prev.address })) && (await current(prev.address)) && (await yes(`Carry on with the contract already at ${prev.address}`, true)) ? prev.address : null;
   let args = prev && address ? prev.args : null;
   const read = (functionName, a = []) => pub.readContract({ address, abi, functionName, args: a });
+  if (address && (await read('pageCount'))) die('That contract is locked. There is nothing left to do to it.');
   const fee = await pub.getGasPrice();
   const send = async (label, tx) => {
     const hash = await tx();
@@ -85,7 +104,7 @@ try {
   if (!address) {
     say('\nContract settings. Enter keeps the value in brackets. None of these can be changed after deployment.');
     const price = parseEther(await ask('Price of one copy of one page, in ETH', '0.003'));
-    const cap = BigInt(await ask('Most copies of any one page (0 = no limit)', '0'));
+    const cap = BigInt(await ask('Most copies of any one page (0 = no limit)', '10'));
     const owner = await ask('Owner: can upload and lock the art, and withdraw', account.address);
     const bps = BigInt(Math.round(Number(await ask('Royalty on resale, in percent (0 = none)', '0')) * 100));
     const royaltyTo = bps ? await ask('Royalties are paid to', owner) : owner;
@@ -93,12 +112,29 @@ try {
     if (bps > 10000n) die('A royalty cannot be more than 100%.');
     if (owner.toLowerCase() !== account.address.toLowerCase()) die('The owner must be the deployer for now: the owner uploads the art. Hand ownership over afterwards with transferOwnership.');
     args = [price, cap, owner, royaltyTo, bps];
+  }
 
-    const gas = (await pub.estimateContractGas({ abi, bytecode: bytecode.object, args, account }).catch(() => 3_000_000n)) + BigInt(bytes * 216 + pieces * 90_000) + 60_000n;
-    say(`\nAbout ${gas} gas at ${Number(formatGwei(fee)).toFixed(2)} gwei: roughly ${eth(gas * fee)}, in ${pieces + 2} transactions.`);
-    if (name === 'mainnet') { if ((await ask('This is mainnet and costs real ETH. Type mainnet to go on')) !== 'mainnet') die('Stopped. Nothing was sent.'); }
-    else if (!(await yes('Go on', true))) die('Stopped. Nothing was sent.');
+  // --- the rest of what it needs, so nothing but clears and the lock is asked once sending starts
+  const scan = name !== 'localhost' && (await yes('Verify the source on Etherscan afterwards (or later, with npm run verify)', true)) && (env.ETHERSCAN_KEY || (await secret('Etherscan API key')) || die('Verifying needs an Etherscan key.'));
+  const site = !AUTO && (await yes('Point the site at it afterwards (writes VITE_CHAIN, VITE_CONTRACT and VITE_DEPLOY_BLOCK to .env.local)', true));
 
+  // --- shown back whole, then one go-ahead
+  const [price, cap, owner, royaltyTo, bps] = args.map((x) => (typeof x === 'string' && /^\d+$/.test(x) ? BigInt(x) : x));
+  const gas = address ? 0n : (await pub.estimateContractGas({ abi, bytecode: bytecode.object, args, account }).catch(() => 3_000_000n)) + BigInt(bytes * 216 + pieces * 90_000) + 60_000n;
+  say(`\n— review —
+  chain       ${name} (${id})
+  deployer    ${account.address}
+  contract    ${address ? `carry on with ${address}` : 'new'}
+  price       ${formatEther(price)} ETH a copy
+  editions    ${art.pages.length} pages · ${cap ? `${cap} copies each · ${cap * BigInt(art.pages.length)} NFTs at most` : 'no limit on copies'}
+  owner       ${owner}
+  royalty     ${bps ? `${Number(bps) / 100}% to ${royaltyTo}` : 'none'}
+  verify      ${scan ? 'yes' : 'no'}
+  site        ${[site ? 'write .env.local' : 'leave .env.local', name !== 'localhost' && 'write .env.live'].filter(Boolean).join(' · ')}${gas ? `\n  cost        about ${gas} gas at ${Number(formatGwei(fee)).toFixed(2)} gwei: roughly ${eth(gas * fee)}, in ${pieces + 2} transactions` : ''}`);
+  if (name === 'mainnet') { if ((await ask('\nThis is mainnet and costs real ETH. Type mainnet to go on')) !== 'mainnet') die('Stopped. Nothing was sent.'); }
+  else if (!(await yes('\nGo on', true))) die('Stopped. Nothing was sent.');
+
+  if (!address) {
     say('\nDeploying…');
     const r = await send('contract', () => wallet.deployContract({ abi, bytecode: bytecode.object, args }));
     address = r.contractAddress || die('The deployment went through but made no contract.');
@@ -106,7 +142,7 @@ try {
     if (prev) copyFileSync(recFile, recFile.replace(/\.json$/, `.${prev.address}.json`));   // the record of the one before is kept
     writeFileSync(recFile, JSON.stringify({ chain: name, chainId: id, address, deployer: account.address, block: Number(r.blockNumber), args: args.map((x) => (typeof x === 'bigint' ? x.toString() : x)) }, null, 2));
     say(`  at ${address}`);
-  } else if (await read('pageCount')) die('That contract is locked. There is nothing left to do to it.');
+  }
 
   // --- the three stores, one piece per transaction, from wherever it got to. a piece already there is kept only if it is this build's, byte for byte
   const code = (p) => toHex(Buffer.concat([Buffer.alloc(1), p]));                // a piece as held: a STOP, then the bytes
@@ -133,18 +169,29 @@ try {
   if (await yes('Lock now')) await send('lock', () => wallet.writeContract({ address, abi, functionName: 'lock' }));
 
   // --- verify
-  if (name !== 'localhost' && (await yes('Verify the source on Etherscan', true))) {
-    const scan = env.ETHERSCAN_KEY || (await secret('Etherscan API key'));
-    const types = abi.find((x) => x.type === 'constructor').inputs, typed = [BigInt(args[0]), BigInt(args[1]), args[2], args[3], BigInt(args[4])];
-    const cmd = ['verify-contract', address, 'src/Cryptomnesia.sol:Cryptomnesia', '--chain', String(id), '--constructor-args', encodeAbiParameters(types, typed), '--watch'];
-    try { execFileSync('forge', cmd, { cwd: `${root}contracts`, stdio: 'inherit', env: { ...env, ETHERSCAN_API_KEY: scan } }); }   // the key goes in the environment, where ps cannot see it
-    catch { say(`Verification did not go through. Try again from contracts/ with ETHERSCAN_API_KEY set:\n  forge ${cmd.join(' ')}`); }
-  }
+  if (scan) verify(address, args, id, abi, scan);
 
   // --- tell the site
-  if (!AUTO && (await yes('Point the site at it (writes VITE_CHAIN, VITE_CONTRACT and VITE_DEPLOY_BLOCK to .env.local)', true))) {
+  const block = JSON.parse(readFileSync(recFile, 'utf8')).block;
+  if (site) {
     const f = `${root}.env.local`, keep = existsSync(f) ? readFileSync(f, 'utf8').split('\n').filter((l) => l && !/^VITE_(CHAIN|CONTRACT|DEPLOY_BLOCK)=/.test(l)) : [];
-    writeFileSync(f, [...keep, `VITE_CHAIN=${name}`, `VITE_CONTRACT=${address}`, `VITE_DEPLOY_BLOCK=${JSON.parse(readFileSync(recFile, 'utf8')).block}`, ''].join('\n'));
+    writeFileSync(f, [...keep, `VITE_CHAIN=${name}`, `VITE_CONTRACT=${address}`, `VITE_DEPLOY_BLOCK=${block}`, ''].join('\n'));
+  }
+  // everything the live site needs, to paste into the host's settings. written new each time; what this cannot know (OpenSea, WalletConnect) is carried over from the last one
+  if (name !== 'localhost') {
+    const f = `${root}.env.live`, old = existsSync(f) ? Object.fromEntries(readFileSync(f, 'utf8').split('\n').map((l) => l.match(/^(VITE_\w+)=(.*)$/)?.slice(1)).filter(Boolean)) : {};
+    writeFileSync(f, `# written by npm run deploy, ${new Date().toISOString().slice(0, 10)}: the site's settings for ${name}. copy them into the host's environment
+VITE_CHAIN=${name}
+VITE_CONTRACT=${address}
+VITE_DEPLOY_BLOCK=${block}
+# the same Alchemy key the deploy used. it ends up in the site's code, so in Alchemy's dashboard limit it to the site's domain
+VITE_RPC=${net.rpc(alchemy)}
+# the collection's OpenSea page, once it has one. blank: the mark in the footer stays dim
+VITE_OPENSEA=${old.VITE_OPENSEA || ''}
+# a Reown project id switches WalletConnect on. blank: off
+VITE_WC_PROJECT_ID=${old.VITE_WC_PROJECT_ID || ''}
+`);
+    say('Wrote .env.live');
   }
   say(`\nDone. ${name} · ${address}${net.chain.blockExplorers ? ` · ${net.chain.blockExplorers.default.url}/address/${address}` : ''}`);
   process.exit(0);
